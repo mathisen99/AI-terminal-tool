@@ -8,6 +8,8 @@ from tools import (
     get_weather,
     weather_tool_definition,
     web_search_tool_definition,
+    fetch_webpage,
+    web_fetch_tool_definition,
 )
 
 # ANSI color codes
@@ -54,10 +56,15 @@ def process_question(question: str):
         horoscope_tool_definition,
         weather_tool_definition,
         web_search_tool_definition,
+        web_fetch_tool_definition,
     ]
 
     # Define function handlers (only for custom function tools)
-    function_handlers = {"get_horoscope": get_horoscope, "get_weather": get_weather}
+    function_handlers = {
+        "get_horoscope": get_horoscope,
+        "get_weather": get_weather,
+        "fetch_webpage": fetch_webpage,
+    }
 
     # Create initial input with system prompt
     input_list = [
