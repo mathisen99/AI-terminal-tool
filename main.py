@@ -1,12 +1,20 @@
 """Main entry point for the AI assistant."""
 import sys
+import argparse
+from datetime import datetime
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 from config.settings import DEFAULT_MODEL, SYSTEM_PROMPT, MODEL_PRICING
-from services import OpenAIService
+from services import OpenAIService, MemoryManager
 from tools import (
     web_search_tool_definition,
     fetch_webpage,
     web_fetch_tool_definition,
 )
+
+# Initialize Rich console
+console = Console()
 
 # ANSI color codes
 class Colors:
@@ -42,8 +50,19 @@ def calculate_cost(usage, model):
     return total_cost
 
 
-def process_question(question: str):
-    """Process a single question and return the response."""
+def process_question(question: str, memory_manager: MemoryManager, memory: dict, ask_mode: bool = False):
+    """
+    Process a single question and return the response.
+    
+    Args:
+        question: The user's question
+        memory_manager: MemoryManager instance
+        memory: Current memory dictionary
+        ask_mode: Whether in ask-only mode
+    
+    Returns:
+        Dictionary containing conversation data
+    """
     # Initialize the OpenAI service
     service = OpenAIService(model=DEFAULT_MODEL)
 
@@ -58,11 +77,17 @@ def process_question(question: str):
         "fetch_webpage": fetch_webpage,
     }
 
-    # Create initial input with system prompt
+    # Create initial input with system prompt and conversation history
     input_list = [
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": question},
     ]
+    
+    # Add conversation history from memory (last 10 conversations)
+    context_messages = memory_manager.get_context_messages(memory, limit=10)
+    input_list.extend(context_messages)
+    
+    # Add current question
+    input_list.append({"role": "user", "content": question})
 
     # Track total usage
     total_input_tokens = 0
@@ -179,23 +204,139 @@ def process_question(question: str):
     print(f"  Total tokens: {Colors.YELLOW}{total_input_tokens + total_output_tokens:,}{Colors.RESET}")
     print(f"  Cost: {Colors.GREEN}${total_cost:.6f}{Colors.RESET}")
     print(f"{Colors.BLUE}{'─' * 60}{Colors.RESET}")
+    
+    # Return conversation data for memory storage
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "question": question,
+        "response": final_response,
+        "tools_used": list(set(tool_calls_made)),
+        "tokens": {
+            "input": total_input_tokens,
+            "output": total_output_tokens,
+            "cached": total_cached_tokens
+        },
+        "cost": total_cost,
+        "model": DEFAULT_MODEL
+    }
+
+
+def display_session_info(memory: dict, ask_mode: bool = False):
+    """
+    Display session information in a Rich panel.
+    
+    Args:
+        memory: Memory dictionary containing conversation history
+        ask_mode: Whether in ask-only mode
+    """
+    # Get conversation count
+    conv_count = len(memory.get("conversations", []))
+    max_conv = 50
+    
+    # Get total session cost
+    total_cost = memory.get("total_cost", 0.0)
+    
+    # Determine mode
+    if ask_mode:
+        mode = "Ask-Only (Read-Only) 🔒"
+        mode_style = "yellow"
+    else:
+        mode = "Normal"
+        mode_style = "green"
+    
+    # Create table for session info
+    table = Table.grid(padding=(0, 2))
+    table.add_column(style="cyan", justify="right")
+    table.add_column(style="white")
+    
+    table.add_row("Conversations in memory:", f"{conv_count}/{max_conv}")
+    table.add_row("Total session cost:", f"${total_cost:.4f}")
+    table.add_row("Mode:", f"[{mode_style}]{mode}[/{mode_style}]")
+    
+    # Display panel
+    panel = Panel(
+        table,
+        title="[bold cyan]Session Info[/bold cyan]",
+        border_style="cyan",
+        padding=(1, 2)
+    )
+    
+    console.print(panel)
+    console.print()
+
+
+def parse_arguments():
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Lolo - AI Terminal Assistant with GPT-5.1",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py "What's the weather in Paris?"          # Continue previous conversation
+  python main.py --new "Tell me about Python"            # Start new session (clear memory)
+  python main.py --ask "How do I use sed?"               # Ask-only mode (no system modifications)
+        """
+    )
+    
+    parser.add_argument(
+        "question",
+        nargs="+",
+        help="Your question for the AI assistant"
+    )
+    
+    parser.add_argument(
+        "--new",
+        action="store_true",
+        help="Start a new session by clearing conversation memory"
+    )
+    
+    parser.add_argument(
+        "--ask",
+        action="store_true",
+        help="Ask-only mode: read-only, no command execution or file modifications"
+    )
+    
+    return parser.parse_args()
 
 
 def main():
     """Main entry point."""
-    # Get question from command line arguments
-    if len(sys.argv) < 2:
-        print(f"{Colors.RED}Usage: python main.py \"Your question here\"{Colors.RESET}")
-        print(f"{Colors.YELLOW}Example: python main.py \"What's the weather in Paris?\"{Colors.RESET}")
-        sys.exit(1)
-
-    # Join all arguments as the question
-    question = " ".join(sys.argv[1:])
+    # Parse command-line arguments
+    args = parse_arguments()
     
-    print(f"\n{Colors.BOLD}Question:{Colors.RESET} {question}\n")
+    # Join question parts into a single string
+    question = " ".join(args.question)
+    
+    # Initialize memory manager
+    memory_manager = MemoryManager()
+    
+    # Handle --new flag (clear memory)
+    if args.new:
+        memory_manager.clear_memory()
+    
+    # Load memory
+    memory = memory_manager.load_memory()
+    
+    # Display session info at start
+    console.print()
+    display_session_info(memory, ask_mode=args.ask)
+    
+    # Display question
+    mode_info = ""
+    if args.ask:
+        mode_info = f" {Colors.YELLOW}[Ask-Only Mode 🔒]{Colors.RESET}"
+    elif args.new:
+        mode_info = f" {Colors.CYAN}[New Session]{Colors.RESET}"
+    
+    print(f"{Colors.BOLD}Question:{Colors.RESET} {question}{mode_info}\n")
     
     try:
-        process_question(question)
+        # Process question with memory
+        conversation_data = process_question(question, memory_manager, memory, ask_mode=args.ask)
+        
+        # Save conversation to memory
+        memory_manager.add_conversation(memory, conversation_data)
+        
     except Exception as e:
         print(f"\n{Colors.RED}Error: {e}{Colors.RESET}")
         sys.exit(1)
