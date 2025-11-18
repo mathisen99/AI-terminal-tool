@@ -21,12 +21,23 @@ A powerful command-line AI assistant powered by GPT-5.1 with comprehensive tool-
   - 1-hour caching for repeated fetches (99.6% faster)
   - 25,000 character limit
 
-### 🖼️ Image Analysis
-- Analyze images from file paths or URLs
-- Supports PNG, JPEG, WEBP, non-animated GIF
-- Smart detail level selection (auto-optimizes token usage)
-- Configurable detail levels (low: 85 tokens, high: detailed, auto: intelligent)
-- Maximum 50MB per image, up to 500 images per request
+### 🖼️ Image Capabilities
+- **Image Analysis** - Analyze images from file paths or URLs
+  - Supports PNG, JPEG, WEBP, non-animated GIF
+  - Smart detail level selection (auto-optimizes token usage)
+  - Configurable detail levels (low: 85 tokens, high: detailed, auto: intelligent)
+  - Maximum 50MB per image, up to 500 images per request
+- **Image Generation** - Create images from text prompts using FLUX.1 Kontext
+  - High-quality image generation with natural language prompts
+  - Adjustable aspect ratios (3:7 to 7:3, default 1:1)
+  - Reproducible results with seed parameter
+  - JPEG or PNG output formats
+- **Image Editing** - Edit existing images with text prompts
+  - Object modifications (colors, styles, elements)
+  - Text editing in images with quotation marks
+  - Iterative editing with character consistency
+  - Annotation box support for targeted edits
+  - Works with file paths or URLs
 
 ### 💻 Terminal Command Execution
 - Execute any zsh/oh-my-zsh command from anywhere on your system
@@ -91,6 +102,7 @@ A powerful command-line AI assistant powered by GPT-5.1 with comprehensive tool-
 - UV package manager
 - Chrome/Chromium browser (for JavaScript-rendered pages)
 - OpenAI API key
+- BFL API key (for image generation/editing)
 - Arch Linux (or adapt for your system)
 
 ### Install UV
@@ -128,10 +140,13 @@ This will:
 - Install all dependencies
 - Provide setup instructions
 
-3. Create `.env` file and add your OpenAI API key:
+3. Create `.env` file and add your API keys:
 ```bash
-echo "OPENAI_API_KEY=your_api_key_here" > .env
+echo "OPENAI_API_KEY=your_openai_key_here" > .env
+echo "BFL_API_KEY=your_bfl_key_here" >> .env
 ```
+
+Get your BFL API key from [Black Forest Labs](https://api.bfl.ai/) for image generation/editing.
 
 4. (Optional) Add alias to your `.zshrc` for system-wide access:
 ```bash
@@ -202,6 +217,14 @@ ai "Install htop"
 ai "Analyze the latest screenshot in my home folder"
 ai "What's in this image: ~/Pictures/photo.jpg"
 
+# Image generation
+ai "Generate an image of a cute robot repairing a classic pickup truck"
+ai "Create a 16:9 landscape image of a futuristic city at sunset"
+
+# Image editing
+ai "Edit ~/Pictures/car.jpg and change the car color to red"
+ai "In this image ~/Pictures/sign.jpg, replace 'Hello' with 'Welcome'"
+
 # Web research
 ai "Search the web for the latest Python features"
 ai "What's the current weather in Tokyo?"
@@ -254,7 +277,7 @@ WEB_CACHE_TTL = 3600               # 1 hour (in cache_manager.py)
 
 ## 🛠️ Tools
 
-Lolo has access to 4 tools (optimized to stay under 20 tool limit):
+Lolo has access to 6 tools (optimized to stay under 20 tool limit):
 
 ### 1. Web Search (Built-in)
 - OpenAI's built-in web search
@@ -282,7 +305,25 @@ Lolo has access to 4 tools (optimized to stay under 20 tool limit):
 - Maximum 50MB per image
 - Optimized description: 92 chars
 
-### 4. Execute Command (Custom)
+### 4. Generate Image (Custom)
+- Creates images from text prompts using FLUX.1 Kontext API
+- High-quality image generation (1024x1024 default)
+- Adjustable aspect ratios (3:7 to 7:3)
+- Reproducible results with seed parameter
+- JPEG or PNG output formats
+- Auto-downloads to current directory with descriptive filenames
+
+### 5. Edit Image (Custom)
+- Edits existing images with text prompts using FLUX.1 Kontext API
+- Object modifications (colors, styles, elements)
+- Text editing with quotation marks: Replace '[old]' with '[new]'
+- Iterative editing with character consistency
+- Annotation box support for targeted edits
+- Works with file paths or URLs
+- Auto-saves edited images with descriptive filenames
+- Matches input dimensions by default
+
+### 6. Execute Command (Custom)
 - Executes any zsh command
 - Risk classification for dangerous commands
 - User confirmation for risky operations
@@ -391,6 +432,8 @@ In ask-only mode:
 - ✅ Web search allowed
 - ✅ Fetch webpage allowed
 - ✅ Analyze image allowed
+- ✅ Generate image allowed
+- ✅ Edit image allowed
 - ❌ Execute command blocked
 - 🔒 Clear indicator in session info and question
 
@@ -464,11 +507,12 @@ brew install chromium  # macOS
 # Check .env file exists
 ls -la .env
 
-# View contents (be careful not to expose key)
+# View contents (be careful not to expose keys)
 cat .env
 
 # Ensure format is correct
 echo "OPENAI_API_KEY=sk-..." > .env
+echo "BFL_API_KEY=your_bfl_key" >> .env
 ```
 
 ### Memory issues
@@ -522,6 +566,7 @@ ai() {
 │   ├── web_search.py           # Web search tool definition
 │   ├── web_fetch.py            # Webpage fetching tool
 │   ├── image_analysis.py       # Image analysis tool
+│   ├── image_generation.py     # Image generation and editing tools
 │   └── terminal.py             # Command execution tool
 ├── utils/
 │   ├── __init__.py
@@ -588,6 +633,8 @@ perf_monitor.print_report()
 - **`docs/Function_calling.md`**: Function tool definitions and best practices
 - **`docs/web_search.md`**: Web search tool syntax and citations
 - **`docs/image_usage.md`**: Image analysis formats and token calculation
+- **`docs/create_images.md`**: Image generation with FLUX.1 Kontext
+- **`docs/edit_images.md`**: Image editing with FLUX.1 Kontext
 - **`docs/PERFORMANCE_OPTIMIZATION.md`**: Comprehensive optimization guide
 
 ## 🤝 Contributing

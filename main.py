@@ -28,6 +28,10 @@ from tools import (
     web_fetch_tool_definition,
     analyze_image,
     analyze_image_tool_definition,
+    generate_image,
+    generate_image_tool_definition,
+    edit_image,
+    edit_image_tool_definition,
     execute_command,
     execute_command_tool_definition,
 )
@@ -51,12 +55,16 @@ def get_available_tools(ask_mode: bool = False):
         web_search_tool_definition,
         web_fetch_tool_definition,
         analyze_image_tool_definition,
+        generate_image_tool_definition,
+        edit_image_tool_definition,
     ]
     
     # Function handlers for custom function tools
     function_handlers = {
         "fetch_webpage": fetch_webpage,
         "analyze_image": analyze_image,
+        "generate_image": generate_image,
+        "edit_image": edit_image,
     }
     
     # In normal mode, add command execution tool
@@ -277,6 +285,8 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 tool_icons = {
                     "fetch_webpage": "🌐",
                     "analyze_image": "🖼️",
+                    "generate_image": "🎨",
+                    "edit_image": "✏️",
                     "execute_command": "💻"
                 }
                 icon = tool_icons.get(item.name, "🔧")
@@ -335,6 +345,10 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                         spinner_msg = "[bold yellow]🌐 Fetching webpage...[/bold yellow]"
                     elif item.name == "analyze_image":
                         spinner_msg = "[bold yellow]🖼️  Analyzing image...[/bold yellow]"
+                    elif item.name == "generate_image":
+                        spinner_msg = "[bold yellow]🎨 Generating image...[/bold yellow]"
+                    elif item.name == "edit_image":
+                        spinner_msg = "[bold yellow]✏️  Editing image...[/bold yellow]"
                     elif item.name == "execute_command":
                         spinner_msg = "[bold yellow]💻 Running command...[/bold yellow]"
                     else:

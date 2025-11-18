@@ -100,7 +100,9 @@ def get_system_prompt(ask_mode: bool = False) -> str:
 AVAILABLE TOOLS:
 - web_search: Search the internet for current information
 - fetch_webpage: Fetch and read webpage content
-- analyze_image: Analyze images from files or URLs"""
+- analyze_image: Analyze images from files or URLs
+- generate_image: Create images from text prompts using FLUX.1 Kontext
+- edit_image: Edit existing images with text prompts"""
 
     if not ask_mode:
         base_prompt += """
