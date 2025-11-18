@@ -26,6 +26,8 @@ from tools import (
     web_search_tool_definition,
     fetch_webpage,
     web_fetch_tool_definition,
+    analyze_image,
+    analyze_image_tool_definition,
 )
 
 # Initialize Rich console
@@ -46,11 +48,13 @@ def get_available_tools(ask_mode: bool = False):
     tools = [
         web_search_tool_definition,
         web_fetch_tool_definition,
+        analyze_image_tool_definition,
     ]
     
     # Function handlers for custom function tools
     function_handlers = {
         "fetch_webpage": fetch_webpage,
+        "analyze_image": analyze_image,
     }
     
     # In normal mode, add command execution tool
@@ -61,11 +65,6 @@ def get_available_tools(ask_mode: bool = False):
         # tools.append(execute_command_tool_definition)
         # function_handlers["execute_command"] = execute_command
         pass
-    
-    # TODO: Add image analysis tool when implemented (task 6)
-    # from tools import analyze_image, analyze_image_tool_definition
-    # tools.append(analyze_image_tool_definition)
-    # function_handlers["analyze_image"] = analyze_image
     
     return tools, function_handlers
 

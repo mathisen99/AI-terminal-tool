@@ -81,7 +81,7 @@ class OpenAIService:
             function_handlers: Dictionary mapping function names to handler functions
         
         Returns:
-            List of function call output objects
+            List of function call output objects and/or user messages with image data
         """
         function_outputs = []
         
@@ -93,11 +93,77 @@ class OpenAIService:
                     args = json.loads(item.arguments)
                     result = handler(**args)
                     
-                    # Format the output for the API
-                    function_outputs.append({
-                        "type": "function_call_output",
-                        "call_id": item.call_id,
-                        "output": json.dumps(result) if not isinstance(result, str) else result
-                    })
+                    # Special handling for analyze_image
+                    if item.name == "analyze_image":
+                        # Parse the result JSON
+                        result_data = json.loads(result) if isinstance(result, str) else result
+                        
+                        if result_data.get("status") == "success":
+                            # Extract image data and question
+                            image_data = result_data.get("image_data", {})
+                            question = result_data.get("question")
+                            
+                            # Build content array for user message
+                            content = []
+                            
+                            # Add question text if provided
+                            if question:
+                                content.append({
+                                    "type": "input_text",
+                                    "text": question
+                                })
+                            else:
+                                content.append({
+                                    "type": "input_text",
+                                    "text": "What's in this image?"
+                                })
+                            
+                            # Add image
+                            image_content = {
+                                "type": "input_image",
+                                "image_url": image_data.get("image_url")
+                            }
+                            
+                            # Add detail if specified
+                            detail = image_data.get("detail")
+                            if detail and detail != "auto":
+                                image_content["detail"] = detail
+                            
+                            content.append(image_content)
+                            
+                            # Add as user message with image
+                            function_outputs.append({
+                                "role": "user",
+                                "content": content
+                            })
+                            
+                            # Also add function call output to acknowledge the tool call
+                            source = result_data.get("source", "image")
+                            token_cost = result_data.get("token_cost", 0)
+                            function_outputs.append({
+                                "type": "function_call_output",
+                                "call_id": item.call_id,
+                                "output": f"✓ Image loaded successfully from {source} (estimated {token_cost} tokens). Analyzing..."
+                            })
+                        else:
+                            # Error case - return error message
+                            error = result_data.get("error", "Unknown error")
+                            suggestion = result_data.get("suggestion", "")
+                            error_msg = f"❌ Error: {error}"
+                            if suggestion:
+                                error_msg += f"\n\n💡 {suggestion}"
+                            
+                            function_outputs.append({
+                                "type": "function_call_output",
+                                "call_id": item.call_id,
+                                "output": error_msg
+                            })
+                    else:
+                        # Standard function call handling
+                        function_outputs.append({
+                            "type": "function_call_output",
+                            "call_id": item.call_id,
+                            "output": json.dumps(result) if not isinstance(result, str) else result
+                        })
         
         return function_outputs
