@@ -35,7 +35,7 @@ execute_command_tool_definition = {
                 "description": "Timeout (sec). Default: 30, Max: 300",
             },
         },
-        "required": ["command"],
+        "required": ["command", "working_dir", "timeout"],
         "additionalProperties": False
     },
     "strict": True

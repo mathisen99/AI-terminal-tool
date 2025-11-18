@@ -21,16 +21,16 @@ analyze_image_tool_definition = {
                 "description": "File path or URL. Examples: '~/image.png', 'https://example.com/img.jpg'",
             },
             "detail": {
-                "type": "string",
-                "enum": ["low", "high", "auto"],
+                "type": ["string", "null"],
+                "enum": ["low", "high", "auto", None],
                 "description": "Detail level: 'low' (85 tokens, fast), 'high' (detailed), 'auto' (default)",
             },
             "question": {
-                "type": "string",
+                "type": ["string", "null"],
                 "description": "Optional question about the image",
             },
         },
-        "required": ["image_source"],
+        "required": ["image_source", "detail", "question"],
         "additionalProperties": False
     },
     "strict": True
