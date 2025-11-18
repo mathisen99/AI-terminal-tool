@@ -3,10 +3,6 @@ import sys
 from config.settings import DEFAULT_MODEL, SYSTEM_PROMPT, MODEL_PRICING
 from services import OpenAIService
 from tools import (
-    get_horoscope,
-    horoscope_tool_definition,
-    get_weather,
-    weather_tool_definition,
     web_search_tool_definition,
     fetch_webpage,
     web_fetch_tool_definition,
@@ -53,16 +49,12 @@ def process_question(question: str):
 
     # Define available tools (mix of custom functions and built-in tools)
     tools = [
-        horoscope_tool_definition,
-        weather_tool_definition,
         web_search_tool_definition,
         web_fetch_tool_definition,
     ]
 
     # Define function handlers (only for custom function tools)
     function_handlers = {
-        "get_horoscope": get_horoscope,
-        "get_weather": get_weather,
         "fetch_webpage": fetch_webpage,
     }
 
