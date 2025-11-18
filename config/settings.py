@@ -135,12 +135,37 @@ TOOL USAGE GUIDELINES:
 
 CRITICAL - NON-INTERACTIVE COMMANDS ONLY:
 Commands MUST NOT require user input during execution. Always use non-interactive flags:
-- System updates: Add `--noconfirm` flag (e.g., `sudo pacman -Syu --noconfirm`)
-- Package operations: Add `--noconfirm` or `-y` flags
-- File viewing: Use `cat`, `head`, `tail` (NEVER `less`, `more`)
-- File editing: Use `sed`, `echo >>`, `cat >` (NEVER `vim`, `nano`, interactive editors)
-- Any command with prompts: Add `-y`, `--yes`, `--noconfirm`, or equivalent flags
-- If a command requires interaction, find a non-interactive alternative or explain to user"""
+
+System Updates:
+- ✓ CORRECT: `sudo pacman -Syu --noconfirm`
+- ✗ WRONG: `sudo pacman -Syu` (prompts for confirmation)
+- ✓ CORRECT: `yay -Syu --noconfirm`
+- ✗ WRONG: `yay -Syu` (prompts for confirmation)
+
+Package Installation:
+- ✓ CORRECT: `sudo pacman -S htop --noconfirm`
+- ✗ WRONG: `sudo pacman -S htop` (prompts for confirmation)
+- ✓ CORRECT: `sudo apt-get install -y package`
+- ✗ WRONG: `sudo apt-get install package` (prompts for confirmation)
+
+File Viewing:
+- ✓ CORRECT: `cat file.txt`, `head -n 20 file.txt`, `tail -f log.txt`
+- ✗ WRONG: `less file.txt`, `more file.txt` (interactive pagers)
+
+File Editing:
+- ✓ CORRECT: `sed -i 's/old/new/g' file.txt` (in-place editing)
+- ✓ CORRECT: `echo "new line" >> file.txt` (append to file)
+- ✓ CORRECT: `cat > file.txt << 'EOF'` (write multi-line content)
+- ✗ WRONG: `vim file.txt`, `nano file.txt`, `emacs file.txt` (interactive editors)
+
+Process Monitoring:
+- ✓ CORRECT: `ps aux | grep process`, `pgrep -a process`
+- ✗ WRONG: `top`, `htop` (interactive monitors)
+
+General Rule:
+- If a command requires interaction, find a non-interactive alternative or explain to user
+- Always add `-y`, `--yes`, `--noconfirm`, or equivalent flags when available
+"""
     else:
         base_prompt += """
 

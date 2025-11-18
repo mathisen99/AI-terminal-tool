@@ -28,6 +28,8 @@ from tools import (
     web_fetch_tool_definition,
     analyze_image,
     analyze_image_tool_definition,
+    execute_command,
+    execute_command_tool_definition,
 )
 
 # Initialize Rich console
@@ -58,13 +60,9 @@ def get_available_tools(ask_mode: bool = False):
     }
     
     # In normal mode, add command execution tool
-    # (Will be added when terminal.py is implemented in task 7)
     if not ask_mode:
-        # TODO: Add execute_command tool when implemented
-        # from tools import execute_command, execute_command_tool_definition
-        # tools.append(execute_command_tool_definition)
-        # function_handlers["execute_command"] = execute_command
-        pass
+        tools.append(execute_command_tool_definition)
+        function_handlers["execute_command"] = execute_command
     
     return tools, function_handlers
 
