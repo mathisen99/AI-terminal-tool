@@ -217,7 +217,10 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         # Display progress with spinner for API call
         status_text = f"[cyan]Iteration {iteration}/{MAX_ITERATIONS} | Tool calls: {tool_call_count}/{MAX_TOOL_CALLS_PER_REQUEST}[/cyan]"
         
-        with console.status(f"[bold cyan]Calling API...[/bold cyan] {status_text}", spinner="dots") as status:
+        # Use different spinner for web search vs regular API calls
+        spinner_type = "earth" if any("web_search" in str(t) for t in tool_calls_made[-3:]) else "dots"
+        
+        with console.status(f"[bold cyan]Calling API...[/bold cyan] {status_text}", spinner=spinner_type) as status:
             # Get response from model
             response = service.create_response(input_list, tools)
         
@@ -289,10 +292,19 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                     console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
                 
-                # Display web search with query
+                # Display web search with Rich spinner and query details
                 action = getattr(item, "action", None)
-                if action and hasattr(action, "query"):
-                    console.print(f"[yellow]🌐 Searching web: [bold]{action.query}[/bold][/yellow]")
+                if action:
+                    query = getattr(action, "query", None)
+                    domains = getattr(action, "domains", None)
+                    
+                    if query:
+                        search_text = f"🌐 Searching web: [bold cyan]{query}[/bold cyan]"
+                        if domains:
+                            search_text += f" [dim](domains: {', '.join(domains[:3])})[/dim]"
+                        console.print(f"[yellow]{search_text}[/yellow]")
+                    else:
+                        console.print("[yellow]🌐 Web search performed[/yellow]")
                 else:
                     console.print("[yellow]🌐 Web search performed[/yellow]")
                     
@@ -306,7 +318,27 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
 
         # Process function calls if any
         if has_function_calls:
-            with console.status("[bold yellow]Executing tool...[/bold yellow]", spinner="dots"):
+            # Use different spinner and message based on tool type
+            for item in response.output:
+                if item.type == "function_call":
+                    if item.name == "fetch_webpage":
+                        spinner_msg = "[bold yellow]🌐 Fetching webpage (bypassing bot protection)...[/bold yellow]"
+                        spinner_type = "earth"
+                    elif item.name == "analyze_image":
+                        spinner_msg = "[bold yellow]🖼️  Analyzing image...[/bold yellow]"
+                        spinner_type = "dots"
+                    elif item.name == "execute_command":
+                        spinner_msg = "[bold yellow]💻 Executing command...[/bold yellow]"
+                        spinner_type = "dots"
+                    else:
+                        spinner_msg = "[bold yellow]🔧 Executing tool...[/bold yellow]"
+                        spinner_type = "dots"
+                    break
+            else:
+                spinner_msg = "[bold yellow]Executing tool...[/bold yellow]"
+                spinner_type = "dots"
+            
+            with console.status(spinner_msg, spinner=spinner_type):
                 function_outputs = service.process_function_calls(response, function_handlers)
             input_list.extend(function_outputs)
             continue
@@ -351,13 +383,15 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
     console.print(Markdown(final_response))
     console.print()
     
-    # Display citations if any
+    # Display citations if any with Rich formatting
     if citations:
-        console.print("[bold cyan]Sources:[/bold cyan]")
+        console.print()
+        console.print("[bold cyan]📚 Sources:[/bold cyan]")
         for i, citation in enumerate(citations, 1):
             title = citation["title"] if citation["title"] else "Source"
-            console.print(f"  {i}. [cyan]{title}[/cyan]")
-            console.print(f"     [link={citation['url']}]{citation['url']}[/link]")
+            # Create a nicely formatted citation with clickable link
+            console.print(f"  [bold cyan]{i}.[/bold cyan] [link={citation['url']}]{title}[/link]")
+            console.print(f"     [dim]{citation['url']}[/dim]")
         console.print()
     
     # Display usage statistics using helper function
