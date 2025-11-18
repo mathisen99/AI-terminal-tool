@@ -5,6 +5,11 @@ from datetime import datetime
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.markdown import Markdown
+from rich.spinner import Spinner
+from rich.live import Live
+from rich.text import Text
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from config.settings import (
     DEFAULT_MODEL, 
     DEFAULT_REASONING_EFFORT,
@@ -64,16 +69,63 @@ def get_available_tools(ask_mode: bool = False):
     
     return tools, function_handlers
 
-# ANSI color codes
-class Colors:
-    BLUE = "\033[94m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    CYAN = "\033[96m"
-    MAGENTA = "\033[95m"
-    BOLD = "\033[1m"
-    RESET = "\033[0m"
+
+# Rich helper functions for common patterns
+def create_spinner(text: str, spinner_type: str = "dots"):
+    """Create a Rich spinner with text."""
+    return Spinner(spinner_type, text=text)
+
+
+def create_status_panel(title: str, content: str, style: str = "cyan"):
+    """Create a Rich panel for status messages."""
+    return Panel(content, title=f"[bold {style}]{title}[/bold {style}]", border_style=style)
+
+
+def create_error_panel(message: str):
+    """Create a Rich panel for error messages."""
+    return Panel(f"[red]{message}[/red]", title="[bold red]❌ Error[/bold red]", border_style="red")
+
+
+def create_warning_panel(message: str):
+    """Create a Rich panel for warning messages."""
+    return Panel(f"[yellow]{message}[/yellow]", title="[bold yellow]⚠️  Warning[/bold yellow]", border_style="yellow")
+
+
+def create_success_panel(message: str):
+    """Create a Rich panel for success messages."""
+    return Panel(f"[green]{message}[/green]", title="[bold green]✓ Success[/bold green]", border_style="green")
+
+
+def create_usage_table(model: str, tool_calls: list, tool_call_count: int, iteration: int,
+                       input_tokens: int, cached_tokens: int, output_tokens: int, 
+                       reasoning_tokens: int, cost: float):
+    """Create a Rich table for usage statistics."""
+    table = Table(title="[bold]Usage Statistics[/bold]", show_header=False, box=None)
+    table.add_column("Metric", style="cyan", justify="right")
+    table.add_column("Value", style="white")
+    
+    table.add_row("Model", f"[cyan]{model}[/cyan]")
+    
+    if tool_calls:
+        table.add_row("Tools used", f"[magenta]{', '.join(set(tool_calls))}[/magenta]")
+        table.add_row("Tool calls", f"[magenta]{tool_call_count}[/magenta]")
+    
+    table.add_row("Iterations", f"[cyan]{iteration}[/cyan]")
+    table.add_row("Input tokens", f"[yellow]{input_tokens:,}[/yellow]")
+    
+    if cached_tokens > 0:
+        table.add_row("Cached tokens", f"[yellow]{cached_tokens:,}[/yellow]")
+    
+    table.add_row("Output tokens", f"[yellow]{output_tokens:,}[/yellow]")
+    
+    if reasoning_tokens > 0:
+        table.add_row("Reasoning tokens", f"[yellow]{reasoning_tokens:,}[/yellow]")
+    
+    total_tokens = input_tokens + output_tokens + reasoning_tokens
+    table.add_row("Total tokens", f"[yellow]{total_tokens:,}[/yellow]")
+    table.add_row("Cost", f"[green]${cost:.6f}[/green]")
+    
+    return table
 
 
 def calculate_cost(usage, model):
@@ -159,17 +211,16 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
     # Keep processing until we get a final text response
     iteration = 0
 
-    print(f"{Colors.CYAN}Processing...{Colors.RESET}\n")
-
     while iteration < MAX_ITERATIONS:
         iteration += 1
 
-        # Display progress
-        print(f"{Colors.CYAN}[Iteration {iteration}/{MAX_ITERATIONS}, Tool calls: {tool_call_count}/{MAX_TOOL_CALLS_PER_REQUEST}]{Colors.RESET}")
-
-        # Get response from model
-        response = service.create_response(input_list, tools)
-
+        # Display progress with spinner for API call
+        status_text = f"[cyan]Iteration {iteration}/{MAX_ITERATIONS} | Tool calls: {tool_call_count}/{MAX_TOOL_CALLS_PER_REQUEST}[/cyan]"
+        
+        with console.status(f"[bold cyan]Calling API...[/bold cyan] {status_text}", spinner="dots") as status:
+            # Get response from model
+            response = service.create_response(input_list, tools)
+        
         # Track usage
         if hasattr(response, "usage"):
             usage = response.usage
@@ -184,10 +235,11 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
             
             # Check cost limits
             if total_cost > MAX_COST_PER_REQUEST:
-                print(f"\n{Colors.RED}❌ Aborted: Cost limit exceeded (${total_cost:.2f} > ${MAX_COST_PER_REQUEST:.2f}){Colors.RESET}\n")
+                error_msg = f"Cost limit exceeded: ${total_cost:.2f} > ${MAX_COST_PER_REQUEST:.2f}"
+                console.print(create_error_panel(error_msg))
                 raise Exception(f"Cost limit exceeded: ${total_cost:.2f}")
             elif total_cost > COST_WARNING_THRESHOLD:
-                print(f"{Colors.YELLOW}⚠️  Warning: High cost (${total_cost:.2f}){Colors.RESET}")
+                console.print(f"[yellow]⚠️  Warning: High cost (${total_cost:.2f})[/yellow]")
 
         # Add response output to input list
         input_list += response.output
@@ -206,32 +258,43 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 
                 # Check if command execution attempted in ask-only mode
                 if ask_mode and item.name == "execute_command":
-                    print(f"\n{Colors.YELLOW}⚠️  Warning: Command execution blocked in ask-only mode 🔒{Colors.RESET}")
-                    print(f"{Colors.YELLOW}   Restart without --ask flag to enable command execution{Colors.RESET}\n")
+                    warning_msg = "Command execution blocked in ask-only mode 🔒\nRestart without --ask flag to enable command execution"
+                    console.print(create_warning_panel(warning_msg))
                     # Skip this tool call
                     continue
                 
-                print(f"{Colors.YELLOW}🔧 Calling tool: {Colors.BOLD}{item.name}{Colors.RESET}")
-                
                 # Check tool call limit
                 if tool_call_count > MAX_TOOL_CALLS_PER_REQUEST:
-                    print(f"\n{Colors.RED}❌ Aborted: Too many tool calls ({tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}){Colors.RESET}\n")
+                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}"
+                    console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
+                
+                # Display tool call with appropriate icon
+                tool_icons = {
+                    "fetch_webpage": "🌐",
+                    "analyze_image": "🖼️",
+                    "execute_command": "💻"
+                }
+                icon = tool_icons.get(item.name, "🔧")
+                console.print(f"[yellow]{icon} Calling tool: [bold]{item.name}[/bold][/yellow]")
                     
             elif item.type == "web_search_call":
                 has_web_search = True
                 tool_call_count += 1
                 tool_calls_made.append("web_search")
-                action = getattr(item, "action", None)
-                if action and hasattr(action, "query"):
-                    print(f"{Colors.YELLOW}🌐 Web search: {Colors.BOLD}{action.query}{Colors.RESET}")
-                else:
-                    print(f"{Colors.YELLOW}🌐 Web search performed{Colors.RESET}")
-                    
+                
                 # Check tool call limit
                 if tool_call_count > MAX_TOOL_CALLS_PER_REQUEST:
-                    print(f"\n{Colors.RED}❌ Aborted: Too many tool calls ({tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}){Colors.RESET}\n")
+                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}"
+                    console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
+                
+                # Display web search with query
+                action = getattr(item, "action", None)
+                if action and hasattr(action, "query"):
+                    console.print(f"[yellow]🌐 Searching web: [bold]{action.query}[/bold][/yellow]")
+                else:
+                    console.print("[yellow]🌐 Web search performed[/yellow]")
                     
             elif item.type == "message":
                 has_message = True
@@ -239,11 +302,12 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 has_reasoning = True
                 # Optionally display reasoning summary
                 if hasattr(item, "summary") and item.summary:
-                    print(f"{Colors.MAGENTA}💭 Reasoning: {item.summary}{Colors.RESET}")
+                    console.print(f"[magenta]💭 Reasoning: {item.summary}[/magenta]")
 
         # Process function calls if any
         if has_function_calls:
-            function_outputs = service.process_function_calls(response, function_handlers)
+            with console.status("[bold yellow]Executing tool...[/bold yellow]", spinner="dots"):
+                function_outputs = service.process_function_calls(response, function_handlers)
             input_list.extend(function_outputs)
             continue
         
@@ -260,7 +324,8 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
 
     # Check if we hit max iterations
     if iteration >= MAX_ITERATIONS:
-        print(f"\n{Colors.YELLOW}⚠️  Warning: Reached maximum iterations ({MAX_ITERATIONS}){Colors.RESET}\n")
+        warning_msg = f"Reached maximum iterations ({MAX_ITERATIONS})"
+        console.print(create_warning_panel(warning_msg))
 
     # Extract final response and citations
     final_response = ""
@@ -282,37 +347,32 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                             })
     
     # Display results
-    print(f"\n{Colors.GREEN}{Colors.BOLD}Response:{Colors.RESET}")
-    print(f"{Colors.GREEN}{final_response}{Colors.RESET}\n")
+    console.print("\n[bold green]Response:[/bold green]")
+    console.print(Markdown(final_response))
+    console.print()
     
     # Display citations if any
     if citations:
-        print(f"{Colors.CYAN}{Colors.BOLD}Sources:{Colors.RESET}")
+        console.print("[bold cyan]Sources:[/bold cyan]")
         for i, citation in enumerate(citations, 1):
             title = citation["title"] if citation["title"] else "Source"
-            print(f"  {i}. {Colors.CYAN}{title}{Colors.RESET}")
-            print(f"     {citation['url']}")
-        print()
+            console.print(f"  {i}. [cyan]{title}[/cyan]")
+            console.print(f"     [link={citation['url']}]{citation['url']}[/link]")
+        console.print()
     
-    # Display usage statistics
-    print(f"{Colors.BLUE}{'─' * 60}{Colors.RESET}")
-    print(f"{Colors.BOLD}Usage Statistics:{Colors.RESET}")
-    print(f"  Model: {Colors.CYAN}{DEFAULT_MODEL}{Colors.RESET}")
-    
-    if tool_calls_made:
-        print(f"  Tools used: {Colors.MAGENTA}{', '.join(set(tool_calls_made))}{Colors.RESET}")
-        print(f"  Tool calls: {Colors.MAGENTA}{tool_call_count}{Colors.RESET}")
-    
-    print(f"  Iterations: {Colors.CYAN}{iteration}{Colors.RESET}")
-    print(f"  Input tokens: {Colors.YELLOW}{total_input_tokens:,}{Colors.RESET}")
-    if total_cached_tokens > 0:
-        print(f"  Cached tokens: {Colors.YELLOW}{total_cached_tokens:,}{Colors.RESET}")
-    print(f"  Output tokens: {Colors.YELLOW}{total_output_tokens:,}{Colors.RESET}")
-    if total_reasoning_tokens > 0:
-        print(f"  Reasoning tokens: {Colors.YELLOW}{total_reasoning_tokens:,}{Colors.RESET}")
-    print(f"  Total tokens: {Colors.YELLOW}{total_input_tokens + total_output_tokens + total_reasoning_tokens:,}{Colors.RESET}")
-    print(f"  Cost: {Colors.GREEN}${total_cost:.6f}{Colors.RESET}")
-    print(f"{Colors.BLUE}{'─' * 60}{Colors.RESET}")
+    # Display usage statistics using helper function
+    usage_table = create_usage_table(
+        DEFAULT_MODEL,
+        tool_calls_made,
+        tool_call_count,
+        iteration,
+        total_input_tokens,
+        total_cached_tokens,
+        total_output_tokens,
+        total_reasoning_tokens,
+        total_cost
+    )
+    console.print(usage_table)
     
     # Return conversation data for memory storage
     return {
@@ -436,11 +496,11 @@ def main():
     # Display question
     mode_info = ""
     if args.ask:
-        mode_info = f" {Colors.YELLOW}[Ask-Only Mode 🔒]{Colors.RESET}"
+        mode_info = " [yellow][Ask-Only Mode 🔒][/yellow]"
     elif args.new:
-        mode_info = f" {Colors.CYAN}[New Session]{Colors.RESET}"
+        mode_info = " [cyan][New Session][/cyan]"
     
-    print(f"{Colors.BOLD}Question:{Colors.RESET} {question}{mode_info}\n")
+    console.print(f"[bold]Question:[/bold] {question}{mode_info}\n")
     
     try:
         # Process question with memory
@@ -450,7 +510,8 @@ def main():
         memory_manager.add_conversation(memory, conversation_data)
         
     except Exception as e:
-        print(f"\n{Colors.RED}Error: {e}{Colors.RESET}")
+        error_panel = create_error_panel(str(e))
+        console.print(error_panel)
         sys.exit(1)
 
 
