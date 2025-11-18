@@ -254,7 +254,8 @@ def execute_command(command: str, working_dir: Optional[str] = None, timeout: Op
     
     # Determine working directory
     if working_dir is None:
-        working_dir = os.getcwd()
+        # Use ORIGINAL_CWD if set by alias, otherwise use current directory
+        working_dir = os.environ.get('ORIGINAL_CWD', os.getcwd())
     else:
         # Expand user home directory
         working_dir = os.path.expanduser(working_dir)

@@ -143,8 +143,8 @@ RESPONSE STYLE:
 """
     
     # Dynamic content last (not cached, but minimal)
-    # Get current working directory
-    cwd = os.getcwd()
+    # Get current working directory (use ORIGINAL_CWD if set by alias)
+    cwd = os.environ.get('ORIGINAL_CWD', os.getcwd())
     
     # Get current date/time
     now = datetime.now()

@@ -196,7 +196,9 @@ def format_image_for_api(image_source: str, detail: str = "auto") -> Dict:
     
     # Make absolute if relative
     if not file_path.is_absolute():
-        file_path = Path.cwd() / file_path
+        # Use ORIGINAL_CWD if set by alias, otherwise use current directory
+        cwd = Path(os.environ.get('ORIGINAL_CWD', os.getcwd()))
+        file_path = cwd / file_path
     
     # Check if file exists
     if not file_path.exists():
@@ -296,7 +298,9 @@ def analyze_image(image_source: str, detail: str = "auto", question: Optional[st
         if not image_source.startswith(("http://", "https://")):
             file_path = Path(image_source).expanduser()
             if not file_path.is_absolute():
-                file_path = Path.cwd() / file_path
+                # Use ORIGINAL_CWD if set by alias, otherwise use current directory
+                cwd = Path(os.environ.get('ORIGINAL_CWD', os.getcwd()))
+                file_path = cwd / file_path
             
             # Smart detail selection for auto mode
             if detail == "auto" and file_path.exists():
