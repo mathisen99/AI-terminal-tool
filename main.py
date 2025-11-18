@@ -204,6 +204,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
     total_cost = 0.0
     tool_calls_made = []
     tool_call_count = 0
+    tool_results = {}  # Track tool results for summary
 
     # Keep processing until we get a final text response
     iteration = 0
@@ -212,12 +213,14 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         iteration += 1
 
         # Display progress with spinner for API call
-        status_text = f"[cyan]Iteration {iteration}/{MAX_ITERATIONS} | Tool calls: {tool_call_count}/{MAX_TOOL_CALLS_PER_REQUEST}[/cyan]"
+        # Optimized: Only show essential info to reduce rendering overhead
+        status_text = f"[cyan]Iter {iteration}/{MAX_ITERATIONS} | Tools: {tool_call_count}/{MAX_TOOL_CALLS_PER_REQUEST} | ${total_cost:.3f}[/cyan]"
         
         # Use different spinner for web search vs regular API calls
-        spinner_type = "earth" if any("web_search" in str(t) for t in tool_calls_made[-3:]) else "dots"
+        # Optimized: Use simpler spinners for better performance
+        spinner_type = "dots" if not any("web_search" in str(t) for t in tool_calls_made[-3:]) else "arc"
         
-        with console.status(f"[bold cyan]Calling API...[/bold cyan] {status_text}", spinner=spinner_type) as status:
+        with console.status(f"[bold cyan]API call...[/bold cyan] {status_text}", spinner=spinner_type, refresh_per_second=8) as status:
             # Get response from model
             response = service.create_response(input_list, tools)
         
@@ -235,11 +238,12 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
             
             # Check cost limits
             if total_cost > MAX_COST_PER_REQUEST:
-                error_msg = f"Cost limit exceeded: ${total_cost:.2f} > ${MAX_COST_PER_REQUEST:.2f}"
+                error_msg = f"Cost limit exceeded: ${total_cost:.2f} > ${MAX_COST_PER_REQUEST:.2f}\n\nThe request has been aborted to prevent excessive costs."
                 console.print(create_error_panel(error_msg))
                 raise Exception(f"Cost limit exceeded: ${total_cost:.2f}")
             elif total_cost > COST_WARNING_THRESHOLD:
-                console.print(f"[yellow]⚠️  Warning: High cost (${total_cost:.2f})[/yellow]")
+                warning_msg = f"High cost detected: ${total_cost:.2f}\n\nThis request is approaching the cost limit of ${MAX_COST_PER_REQUEST:.2f}"
+                console.print(create_warning_panel(warning_msg))
 
         # Add response output to input list
         input_list += response.output
@@ -258,25 +262,33 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 
                 # Check if command execution attempted in ask-only mode
                 if ask_mode and item.name == "execute_command":
-                    warning_msg = "Command execution blocked in ask-only mode 🔒\nRestart without --ask flag to enable command execution"
+                    warning_msg = "Command execution blocked in ask-only mode 🔒\n\nRestart without --ask flag to enable command execution."
                     console.print(create_warning_panel(warning_msg))
                     # Skip this tool call
                     continue
                 
                 # Check tool call limit
                 if tool_call_count > MAX_TOOL_CALLS_PER_REQUEST:
-                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}"
+                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}\n\nThe request has been aborted to prevent excessive API usage."
                     console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
                 
-                # Display tool call with appropriate icon
+                # Display tool call with appropriate icon and panel
                 tool_icons = {
                     "fetch_webpage": "🌐",
                     "analyze_image": "🖼️",
                     "execute_command": "💻"
                 }
                 icon = tool_icons.get(item.name, "🔧")
-                console.print(f"[yellow]{icon} Calling tool: [bold]{item.name}[/bold][/yellow]")
+                
+                # Create a panel for tool call
+                tool_panel = Panel(
+                    f"[bold white]{item.name}[/bold white]",
+                    title=f"[bold yellow]{icon} Tool Call[/bold yellow]",
+                    border_style="yellow",
+                    padding=(0, 1)
+                )
+                console.print(tool_panel)
                     
             elif item.type == "web_search_call":
                 has_web_search = True
@@ -285,7 +297,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 
                 # Check tool call limit
                 if tool_call_count > MAX_TOOL_CALLS_PER_REQUEST:
-                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}"
+                    error_msg = f"Too many tool calls: {tool_call_count} > {MAX_TOOL_CALLS_PER_REQUEST}\n\nThe request has been aborted to prevent excessive API usage."
                     console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
                 
@@ -316,27 +328,39 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         # Process function calls if any
         if has_function_calls:
             # Use different spinner and message based on tool type
+            # Optimized: Simpler messages and consistent spinner for better performance
             for item in response.output:
                 if item.type == "function_call":
                     if item.name == "fetch_webpage":
-                        spinner_msg = "[bold yellow]🌐 Fetching webpage (bypassing bot protection)...[/bold yellow]"
-                        spinner_type = "earth"
+                        spinner_msg = "[bold yellow]🌐 Fetching webpage...[/bold yellow]"
                     elif item.name == "analyze_image":
                         spinner_msg = "[bold yellow]🖼️  Analyzing image...[/bold yellow]"
-                        spinner_type = "dots"
                     elif item.name == "execute_command":
-                        spinner_msg = "[bold yellow]💻 Executing command...[/bold yellow]"
-                        spinner_type = "dots"
+                        spinner_msg = "[bold yellow]💻 Running command...[/bold yellow]"
                     else:
-                        spinner_msg = "[bold yellow]🔧 Executing tool...[/bold yellow]"
-                        spinner_type = "dots"
+                        spinner_msg = "[bold yellow]🔧 Running tool...[/bold yellow]"
                     break
             else:
-                spinner_msg = "[bold yellow]Executing tool...[/bold yellow]"
-                spinner_type = "dots"
+                spinner_msg = "[bold yellow]Running tool...[/bold yellow]"
             
-            with console.status(spinner_msg, spinner=spinner_type):
+            # Optimized: Use consistent spinner and reduced refresh rate
+            with console.status(spinner_msg, spinner="dots", refresh_per_second=8):
                 function_outputs = service.process_function_calls(response, function_handlers)
+            
+            # Track tool results for summary
+            for output_item in function_outputs:
+                if output_item.get("type") == "function_output":
+                    tool_name = output_item.get("name", "unknown")
+                    output_content = output_item.get("output", "")
+                    
+                    # Determine success/failure
+                    if "❌" in output_content or "Error:" in output_content:
+                        tool_results[tool_name] = "❌ Failed"
+                    elif "⚠️" in output_content or "Warning:" in output_content:
+                        tool_results[tool_name] = "⚠️  Warning"
+                    else:
+                        tool_results[tool_name] = "✓ Success"
+            
             input_list.extend(function_outputs)
             continue
         
@@ -353,7 +377,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
 
     # Check if we hit max iterations
     if iteration >= MAX_ITERATIONS:
-        warning_msg = f"Reached maximum iterations ({MAX_ITERATIONS})"
+        warning_msg = f"Reached maximum iterations ({MAX_ITERATIONS})\n\nThe conversation loop has been stopped to prevent excessive processing."
         console.print(create_warning_panel(warning_msg))
 
     # Extract final response and citations
@@ -375,20 +399,39 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                                 "title": getattr(annotation, "title", ""),
                             })
     
-    # Display results
-    console.print("\n[bold green]Response:[/bold green]")
-    console.print(Markdown(final_response))
+    # Display results in a panel
+    console.print()
+    response_panel = Panel(
+        Markdown(final_response),
+        title="[bold green]✓ Response[/bold green]",
+        border_style="green",
+        padding=(1, 2)
+    )
+    console.print(response_panel)
     console.print()
     
     # Display citations if any with Rich formatting
     if citations:
-        console.print()
-        console.print("[bold cyan]📚 Sources:[/bold cyan]")
+        citations_content = ""
         for i, citation in enumerate(citations, 1):
             title = citation["title"] if citation["title"] else "Source"
-            # Create a nicely formatted citation with clickable link
-            console.print(f"  [bold cyan]{i}.[/bold cyan] [link={citation['url']}]{title}[/link]")
-            console.print(f"     [dim]{citation['url']}[/dim]")
+            citations_content += f"[bold cyan]{i}.[/bold cyan] [link={citation['url']}]{title}[/link]\n"
+            citations_content += f"   [dim]{citation['url']}[/dim]\n\n"
+        
+        citations_panel = Panel(
+            citations_content.strip(),
+            title="[bold cyan]📚 Sources[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2)
+        )
+        console.print(citations_panel)
+        console.print()
+    
+    # Display tool usage summary if tools were used
+    if tool_results:
+        console.print("[bold]Tool Usage Summary:[/bold]")
+        for tool_name, result in tool_results.items():
+            console.print(f"  {result} [cyan]{tool_name}[/cyan]")
         console.print()
     
     # Display usage statistics using helper function
@@ -404,6 +447,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         total_cost
     )
     console.print(usage_table)
+    console.print()
     
     # Return conversation data for memory storage
     return {

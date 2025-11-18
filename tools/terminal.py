@@ -14,24 +14,25 @@ from rich.prompt import Confirm
 console = Console()
 
 # Tool definition for OpenAI function calling (with strict mode)
+# Optimized for token efficiency while maintaining clarity
 execute_command_tool_definition = {
     "type": "function",
     "name": "execute_command",
-    "description": "Execute a shell command in zsh. Can run any command including file operations (cat, ls, sed, grep, echo, etc.). Returns stdout, stderr, and exit code. DANGEROUS commands require user confirmation. Commands MUST be non-interactive (use --noconfirm, -y flags; use sed/echo instead of vim/nano; use cat instead of less/more).",
+    "description": "Execute zsh command. Supports file ops (cat, ls, sed, grep, echo). Returns stdout, stderr, exit code. Dangerous commands need confirmation. MUST be non-interactive (use --noconfirm; sed/echo not vim/nano; cat not less/more).",
     "parameters": {
         "type": "object",
         "properties": {
             "command": {
                 "type": "string",
-                "description": "Shell command to execute. Can be chained with && or ||. Must be non-interactive. Examples: 'ls -la', 'cat file.txt', 'echo \"content\" > file.txt', 'sed -i \"s/old/new/g\" file.txt', 'sudo pacman -Syu --noconfirm'",
+                "description": "Command to run. Chainable with && or ||. Non-interactive only. Ex: 'ls -la', 'cat file.txt', 'sudo pacman -Syu --noconfirm'",
             },
             "working_dir": {
                 "type": ["string", "null"],
-                "description": "Working directory for command execution. If not specified, uses the directory where main.py was invoked.",
+                "description": "Working dir. Default: current dir",
             },
             "timeout": {
                 "type": ["integer", "null"],
-                "description": "Timeout in seconds. Default: 30. Maximum: 300. Use higher values for long-running commands like system updates.",
+                "description": "Timeout (sec). Default: 30, Max: 300",
             },
         },
         "required": ["command"],

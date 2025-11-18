@@ -8,25 +8,26 @@ import io
 import math
 
 # Tool definition for OpenAI function calling (with strict mode)
+# Optimized for token efficiency while maintaining clarity
 analyze_image_tool_definition = {
     "type": "function",
     "name": "analyze_image",
-    "description": "Analyze an image from a file path or URL. Supports PNG, JPEG, WEBP, non-animated GIF. Returns detailed description of image contents. Maximum 50MB per image.",
+    "description": "Analyze image from file path or URL. Supports PNG, JPEG, WEBP, GIF (non-animated). Max 50MB.",
     "parameters": {
         "type": "object",
         "properties": {
             "image_source": {
                 "type": "string",
-                "description": "File path (absolute or relative) or URL to the image. Examples: '/home/user/image.png', '~/Pictures/photo.jpg', 'https://example.com/image.jpg'",
+                "description": "File path or URL. Examples: '~/image.png', 'https://example.com/img.jpg'",
             },
             "detail": {
                 "type": "string",
                 "enum": ["low", "high", "auto"],
-                "description": "Level of detail for analysis. 'low' is faster and cheaper (85 tokens), 'high' provides more detailed analysis, 'auto' lets the model decide. Default: 'auto'",
+                "description": "Detail level: 'low' (85 tokens, fast), 'high' (detailed), 'auto' (default)",
             },
             "question": {
                 "type": "string",
-                "description": "Optional specific question about the image. If not provided, returns general description.",
+                "description": "Optional question about the image",
             },
         },
         "required": ["image_source"],
@@ -240,6 +241,41 @@ def format_image_for_api(image_source: str, detail: str = "auto") -> Dict:
     }
 
 
+def smart_detail_selection(file_path: Path, detail: str = "auto") -> str:
+    """
+    Intelligently select detail level based on image characteristics.
+    Optimizes token usage while maintaining quality.
+    
+    Args:
+        file_path: Path to the image file
+        detail: Requested detail level
+    
+    Returns:
+        Optimized detail level ('low' or 'high')
+    """
+    if detail != "auto":
+        return detail
+    
+    try:
+        with Image.open(file_path) as img:
+            width, height = img.size
+            
+            # Use low detail for small images (< 512x512)
+            if width < 512 and height < 512:
+                return "low"
+            
+            # Use low detail for very large images to save tokens
+            # (they'll be downscaled anyway)
+            if width > 2048 or height > 2048:
+                return "low"
+            
+            # Use high detail for medium-sized images where detail matters
+            return "high"
+    except:
+        # Default to low if we can't determine
+        return "low"
+
+
 def analyze_image(image_source: str, detail: str = "auto", question: Optional[str] = None) -> str:
     """
     Analyze an image from a file path or URL.
@@ -256,6 +292,16 @@ def analyze_image(image_source: str, detail: str = "auto", question: Optional[st
         JSON string with image data formatted for API and metadata
     """
     try:
+        # For file paths, apply smart detail selection
+        if not image_source.startswith(("http://", "https://")):
+            file_path = Path(image_source).expanduser()
+            if not file_path.is_absolute():
+                file_path = Path.cwd() / file_path
+            
+            # Smart detail selection for auto mode
+            if detail == "auto" and file_path.exists():
+                detail = smart_detail_selection(file_path, detail)
+        
         # Format image for API
         image_data = format_image_for_api(image_source, detail)
         

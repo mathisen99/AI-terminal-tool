@@ -15,16 +15,17 @@ USER_AGENTS = [
 ]
 
 # Tool definition for OpenAI function calling (with strict mode)
+# Optimized for token efficiency while maintaining clarity
 web_fetch_tool_definition = {
     "type": "function",
     "name": "fetch_webpage",
-    "description": "Fetch and extract clean text content from a webpage URL. Handles JavaScript-rendered pages and bypasses bot protection including Cloudflare. Returns up to 25,000 characters of clean text.",
+    "description": "Fetch webpage text content. Handles JS-rendered pages, bypasses bot protection. Returns up to 25k chars.",
     "parameters": {
         "type": "object",
         "properties": {
             "url": {
                 "type": "string",
-                "description": "The full URL of the webpage to fetch (e.g., 'https://example.com/article')",
+                "description": "Full URL (e.g., 'https://example.com')",
             },
         },
         "required": ["url"],
@@ -265,6 +266,7 @@ def fetch_webpage(url: str) -> str:
     """
     Fetch and extract clean text content from a webpage.
     Automatically handles bot protection, Cloudflare challenges, and cookie dialogs.
+    Uses caching to avoid repeated fetches (1 hour TTL).
     
     Args:
         url: The URL of the webpage to fetch
@@ -275,6 +277,16 @@ def fetch_webpage(url: str) -> str:
     # Validate URL
     if not url.startswith(("http://", "https://")):
         return "❌ Error: Invalid URL format\n\nURL must start with http:// or https://\nExample: https://example.com"
+    
+    # Check cache first
+    try:
+        from services.cache_manager import web_cache
+        cached_content = web_cache.get(url)
+        if cached_content:
+            return f"✓ Successfully fetched (cached): {url}\n{cached_content}"
+    except ImportError:
+        # If cache not available, continue without caching
+        pass
     
     # Try fetching with requests first (faster, with retry logic)
     result = fetch_with_requests(url, max_retries=3)
@@ -329,8 +341,7 @@ def fetch_webpage(url: str) -> str:
         truncated = True
     
     # Add metadata header
-    output = f"✓ Successfully fetched: {url}\n"
-    output += f"Content length: {len(clean_text):,} characters"
+    output = f"Content length: {len(clean_text):,} characters"
     if truncated:
         output += " (truncated)"
     output += f"\n{'-' * 80}\n\n"
@@ -339,4 +350,11 @@ def fetch_webpage(url: str) -> str:
     if truncated:
         output += "\n\n[Content truncated at 25,000 characters]"
     
-    return output
+    # Cache the result for future requests
+    try:
+        from services.cache_manager import web_cache
+        web_cache.set(url, output)
+    except ImportError:
+        pass
+    
+    return f"✓ Successfully fetched: {url}\n{output}"
