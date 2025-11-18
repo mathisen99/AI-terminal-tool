@@ -1,36 +1,47 @@
 """OpenAI service for handling API interactions."""
 import json
 from openai import OpenAI
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class OpenAIService:
-    """Service class to handle OpenAI API interactions."""
+    """Service class to handle OpenAI API interactions using Responses API."""
     
-    def __init__(self, model: str = "gpt-5"):
+    def __init__(
+        self, 
+        model: str = "gpt-5.1",
+        reasoning: str = "none",
+        verbosity: str = "medium"
+    ):
         """
         Initialize the OpenAI service.
         
         Args:
-            model: The model to use for completions
+            model: The model to use for completions (default: gpt-5.1)
+            reasoning: Reasoning effort level (none, low, medium, high)
+            verbosity: Output verbosity level (low, medium, high)
         """
         self.client = OpenAI()
         self.model = model
+        self.reasoning = reasoning
+        self.verbosity = verbosity
     
     def create_response(
         self,
         input_list: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
-        instructions: str = None,
+        reasoning: Optional[Dict[str, str]] = None,
+        text: Optional[Dict[str, str]] = None,
         tool_choice: str = "auto"
     ) -> Any:
         """
-        Create a response using the OpenAI API.
+        Create a response using the Responses API with GPT-5.1.
         
         Args:
             input_list: List of input messages and function calls
             tools: List of available tools for function calling
-            instructions: Optional instructions for the model
+            reasoning: Optional reasoning configuration dict (e.g., {"effort": "low"})
+            text: Optional text configuration dict (e.g., {"verbosity": "low"})
             tool_choice: Controls tool usage ("auto", "required", "none")
         
         Returns:
@@ -43,8 +54,17 @@ class OpenAIService:
             "tool_choice": tool_choice,
         }
         
-        if instructions:
-            kwargs["instructions"] = instructions
+        # Add reasoning configuration
+        if reasoning:
+            kwargs["reasoning"] = reasoning
+        else:
+            kwargs["reasoning"] = {"effort": self.reasoning}
+        
+        # Add verbosity configuration
+        if text:
+            kwargs["text"] = text
+        else:
+            kwargs["text"] = {"verbosity": self.verbosity}
         
         return self.client.responses.create(**kwargs)
     
@@ -77,7 +97,7 @@ class OpenAIService:
                     function_outputs.append({
                         "type": "function_call_output",
                         "call_id": item.call_id,
-                        "output": json.dumps({"horoscope": result})
+                        "output": json.dumps(result) if not isinstance(result, str) else result
                     })
         
         return function_outputs
