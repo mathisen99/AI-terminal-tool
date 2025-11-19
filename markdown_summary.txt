@@ -1,6 +1,0 @@
-Markdown file size summary (bytes):
-
-OPTIMIZATION_SUMMARY.md         6902 bytes
-PERFORMANCE_VALIDATION.md       8345 bytes
-README.md                      21904 bytes
-VALIDATION_REPORT.md            8188 bytes
