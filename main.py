@@ -220,6 +220,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
     tool_calls_made = []
     tool_call_count = 0
     tool_results = {}  # Track tool results for summary
+    executed_commands = []  # Track all executed commands
 
     # Keep processing until we get a final text response
     iteration = 0
@@ -344,6 +345,19 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
 
         # Process function calls if any
         if has_function_calls:
+            # Capture executed commands before processing
+            for item in response.output:
+                if item.type == "function_call" and item.name == "execute_command":
+                    if hasattr(item, "arguments"):
+                        import json
+                        try:
+                            args = json.loads(item.arguments) if isinstance(item.arguments, str) else item.arguments
+                            command = args.get("command", "")
+                            if command:
+                                executed_commands.append(command)
+                        except:
+                            pass
+            
             # Use different spinner and message based on tool type
             # Optimized: Simpler messages and consistent spinner for better performance
             for item in response.output:
@@ -453,6 +467,15 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         console.print("[bold]Tool Usage Summary:[/bold]")
         for tool_name, result in tool_results.items():
             console.print(f"  {result} [cyan]{tool_name}[/cyan]")
+        console.print()
+    
+    # Display executed commands if any
+    if executed_commands:
+        console.print("[bold]Executed Commands:[/bold]")
+        for i, cmd in enumerate(executed_commands, 1):
+            # Truncate long commands
+            display_cmd = cmd if len(cmd) <= 80 else cmd[:77] + "..."
+            console.print(f"  [cyan]{i}.[/cyan] [yellow]{display_cmd}[/yellow]")
         console.print()
     
     # Display usage statistics using helper function
