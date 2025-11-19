@@ -27,20 +27,24 @@ A powerful command-line AI assistant powered by GPT-5.1 with comprehensive tool-
   - Smart detail level selection (auto-optimizes token usage)
   - Configurable detail levels (low: 85 tokens, high: detailed, auto: intelligent)
   - Maximum 50MB per image, up to 500 images per request
-- **Image Generation** - Create images from text prompts using FLUX.1 Kontext
+- **Image Generation** - Create images from text prompts using FLUX.1 Kontext (optional, requires BFL_API_KEY)
   - High-quality image generation with natural language prompts
   - Adjustable aspect ratios (3:7 to 7:3, default 1:1)
   - Reproducible results with seed parameter
   - JPEG or PNG output formats
-- **Image Editing** - Edit existing images with text prompts
+  - Auto-downloads to current directory with descriptive filenames
+- **Image Editing** - Edit existing images with text prompts (optional, requires BFL_API_KEY)
   - Object modifications (colors, styles, elements)
   - Text editing in images with quotation marks
   - Iterative editing with character consistency
   - Annotation box support for targeted edits
   - Works with file paths or URLs
+  - Auto-saves edited images with descriptive filenames
 
 ### 💻 Terminal Command Execution
 - Execute any zsh/oh-my-zsh command from anywhere on your system
+- **Command visibility**: Shows command in tool call box before execution
+- **Execution summary**: Lists all executed commands at the end
 - Intelligent risk classification for dangerous commands
 - User confirmation prompts for risky operations (rm -rf, dd, chmod -R 777, etc.)
 - Command chaining support (&&, ||, pipes)
@@ -76,12 +80,15 @@ A powerful command-line AI assistant powered by GPT-5.1 with comprehensive tool-
 - Last 10 conversations used for context
 
 ### 🔒 Safety Features
+- **API key validation**: Checks for required OPENAI_API_KEY at startup
+- **Conditional tool loading**: Only loads image tools if BFL_API_KEY is present
 - Maximum 20 tool calls per request
 - Maximum 10 iterations per conversation
 - Cost warning at $0.50, abort at $2.00 per request
 - Dangerous command detection and confirmation
 - Interactive command prevention
 - Command execution logging with timestamps
+- Command visibility and execution summary
 - Sudo support (NOPASSWD configured)
 - Environment variable inheritance
 - Working directory context preservation
@@ -242,6 +249,31 @@ ai "What processes are using the most CPU?"
 ai "Show me my git status"
 ai "What's 15 multiplied by 23?"
 ```
+
+### Command Execution Display
+
+When executing commands, Lolo provides full transparency:
+
+**During execution:**
+```
+╭─────────────────────── 💻 Tool Call ───────────────────────╮
+│ execute_command                                            │
+│ date --iso-8601=seconds                                    │
+╰────────────────────────────────────────────────────────────╯
+```
+
+**After completion:**
+```
+Executed Commands:
+  1. date --iso-8601=seconds
+  2. ls -la *.py
+```
+
+This helps you:
+- See exactly what commands are being run
+- Learn useful command patterns
+- Audit system operations
+- Reproduce commands manually if needed
 
 ## ⚙️ Configuration
 
@@ -489,6 +521,36 @@ Lolo is aware of your system:
 
 System info is gathered via `fastfetch` and cached for 5 minutes.
 
+## 🚀 Startup Behavior
+
+### API Key Validation
+
+On startup, Lolo validates your API keys:
+
+**Required: OPENAI_API_KEY**
+- If missing, shows error message with setup instructions
+- Program exits immediately
+- Get your key from: https://platform.openai.com/api-keys
+
+**Optional: BFL_API_KEY**
+- If missing, shows informational tip about image generation features
+- Program continues normally without image generation/editing tools
+- Get your key from: https://api.bfl.ai/
+
+Example startup with BFL_API_KEY missing:
+```
+╭─────────────────────────── ℹ️  Optional Feature ───────────────────────────╮
+│                                                                            │
+│  💡 Tip: Add BFL_API_KEY to enable image generation/editing features.      │
+│                                                                            │
+│  Get your API key from: https://api.bfl.ai/                                │
+│  Then add to .env: echo 'BFL_API_KEY=your-key-here' >> .env                │
+│                                                                            │
+╰────────────────────────────────────────────────────────────────────────────╯
+```
+
+This is informational only - the assistant works perfectly without it.
+
 ## 🐛 Troubleshooting
 
 ### UV not found
@@ -596,9 +658,7 @@ ai() {
 ├── .gitignore                  # Git ignore rules
 ├── requirements.txt            # Python dependencies
 ├── setup.sh                    # Setup script
-├── README.md                   # This file
-├── OPTIMIZATION_SUMMARY.md     # Performance optimization summary
-└── PERFORMANCE_VALIDATION.md   # Performance test results
+└── README.md                   # This file
 ```
 
 ## 🔧 Development
