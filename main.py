@@ -583,7 +583,7 @@ def main():
     # Check for BFL API key (optional, just inform user)
     if not os.environ.get("BFL_API_KEY"):
         info_msg = "💡 Tip: Add BFL_API_KEY to enable image generation/editing features.\n\n"
-        info_msg += "Get your free API key from: https://api.bfl.ai/\n"
+        info_msg += "Get your API key from: https://api.bfl.ai/\n"
         info_msg += "Then add to .env: echo 'BFL_API_KEY=your-key-here' >> .env"
         console.print(Panel(
             info_msg,
