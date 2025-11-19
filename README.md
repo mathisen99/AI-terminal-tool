@@ -101,8 +101,8 @@ A powerful command-line AI assistant powered by GPT-5.1 with comprehensive tool-
 - Python 3.x
 - UV package manager
 - Chrome/Chromium browser (for JavaScript-rendered pages)
-- OpenAI API key
-- BFL API key (for image generation/editing)
+- **OpenAI API key** (required)
+- **BFL API key** (optional - for image generation/editing)
 - Arch Linux (or adapt for your system)
 
 ### Install UV
@@ -142,11 +142,18 @@ This will:
 
 3. Create `.env` file and add your API keys:
 ```bash
+# Required: OpenAI API key
 echo "OPENAI_API_KEY=your_openai_key_here" > .env
+
+# Optional: BFL API key for image generation/editing
 echo "BFL_API_KEY=your_bfl_key_here" >> .env
 ```
 
-Get your BFL API key from [Black Forest Labs](https://api.bfl.ai/) for image generation/editing.
+**API Keys:**
+- **OpenAI**: Required for all features. Get from [OpenAI Platform](https://platform.openai.com/api-keys)
+- **BFL**: Optional for image generation/editing. Get from [Black Forest Labs](https://api.bfl.ai/)
+
+If BFL_API_KEY is not set, the assistant will work normally but without image generation/editing tools.
 
 4. (Optional) Add alias to your `.zshrc` for system-wide access:
 ```bash
@@ -277,7 +284,9 @@ WEB_CACHE_TTL = 3600               # 1 hour (in cache_manager.py)
 
 ## 🛠️ Tools
 
-Lolo has access to 6 tools (optimized to stay under 20 tool limit):
+Lolo has access to 4-6 tools depending on available API keys (optimized to stay under 20 tool limit):
+
+**Core Tools (always available):**
 
 ### 1. Web Search (Built-in)
 - OpenAI's built-in web search
@@ -305,6 +314,8 @@ Lolo has access to 6 tools (optimized to stay under 20 tool limit):
 - Maximum 50MB per image
 - Optimized description: 92 chars
 
+**Optional Tools (require BFL_API_KEY):**
+
 ### 4. Generate Image (Custom)
 - Creates images from text prompts using FLUX.1 Kontext API
 - High-quality image generation (1024x1024 default)
@@ -322,6 +333,8 @@ Lolo has access to 6 tools (optimized to stay under 20 tool limit):
 - Works with file paths or URLs
 - Auto-saves edited images with descriptive filenames
 - Matches input dimensions by default
+
+**Core Tools (continued):**
 
 ### 6. Execute Command (Custom)
 - Executes any zsh command
@@ -512,8 +525,10 @@ cat .env
 
 # Ensure format is correct
 echo "OPENAI_API_KEY=sk-..." > .env
-echo "BFL_API_KEY=your_bfl_key" >> .env
+echo "BFL_API_KEY=your_bfl_key" >> .env  # Optional
 ```
+
+**Note**: If you see a message about BFL_API_KEY at startup, it's just informational. The assistant will work fine without it, just without image generation/editing features.
 
 ### Memory issues
 ```bash

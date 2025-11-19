@@ -42,7 +42,7 @@ console = Console()
 
 def get_available_tools(ask_mode: bool = False):
     """
-    Get available tools based on mode.
+    Get available tools based on mode and available API keys.
     
     Args:
         ask_mode: Whether in ask-only mode
@@ -50,22 +50,29 @@ def get_available_tools(ask_mode: bool = False):
     Returns:
         tuple: (tools list, function_handlers dict)
     """
+    import os
+    
     # Base tools available in all modes
     tools = [
         web_search_tool_definition,
         web_fetch_tool_definition,
         analyze_image_tool_definition,
-        generate_image_tool_definition,
-        edit_image_tool_definition,
     ]
     
     # Function handlers for custom function tools
     function_handlers = {
         "fetch_webpage": fetch_webpage,
         "analyze_image": analyze_image,
-        "generate_image": generate_image,
-        "edit_image": edit_image,
     }
+    
+    # Add image generation/editing tools only if BFL_API_KEY is set
+    if os.environ.get("BFL_API_KEY"):
+        tools.extend([
+            generate_image_tool_definition,
+            edit_image_tool_definition,
+        ])
+        function_handlers["generate_image"] = generate_image
+        function_handlers["edit_image"] = edit_image
     
     # In normal mode, add command execution tool
     if not ask_mode:
@@ -562,6 +569,30 @@ Examples:
 
 def main():
     """Main entry point."""
+    import os
+    
+    # Check for OpenAI API key
+    if not os.environ.get("OPENAI_API_KEY"):
+        error_msg = "OPENAI_API_KEY not found in environment variables.\n\n"
+        error_msg += "Please add it to your .env file:\n"
+        error_msg += "  echo 'OPENAI_API_KEY=sk-your-key-here' >> .env\n\n"
+        error_msg += "Get your API key from: https://platform.openai.com/api-keys"
+        console.print(create_error_panel(error_msg))
+        sys.exit(1)
+    
+    # Check for BFL API key (optional, just inform user)
+    if not os.environ.get("BFL_API_KEY"):
+        info_msg = "💡 Tip: Add BFL_API_KEY to enable image generation/editing features.\n\n"
+        info_msg += "Get your free API key from: https://api.bfl.ai/\n"
+        info_msg += "Then add to .env: echo 'BFL_API_KEY=your-key-here' >> .env"
+        console.print(Panel(
+            info_msg,
+            title="[bold cyan]ℹ️  Optional Feature[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2)
+        ))
+        console.print()
+    
     # Parse command-line arguments
     args = parse_arguments()
     

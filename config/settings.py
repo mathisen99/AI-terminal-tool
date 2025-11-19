@@ -95,12 +95,18 @@ def get_system_prompt(ask_mode: bool = False) -> str:
     from datetime import datetime
     
     # Static content first (cacheable)
+    import os
+    
     base_prompt = """You are Lolo, Mathisen's personal AI terminal assistant with comprehensive system access.
 
 AVAILABLE TOOLS:
 - web_search: Search the internet for current information
 - fetch_webpage: Fetch and read webpage content
-- analyze_image: Analyze images from files or URLs
+- analyze_image: Analyze images from files or URLs"""
+    
+    # Add image generation tools to prompt only if BFL_API_KEY is available
+    if os.environ.get("BFL_API_KEY"):
+        base_prompt += """
 - generate_image: Create images from text prompts using FLUX.1 Kontext
 - edit_image: Edit existing images with text prompts"""
 
