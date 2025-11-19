@@ -299,9 +299,23 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                 }
                 icon = tool_icons.get(item.name, "🔧")
                 
+                # Create panel content - show command for execute_command
+                panel_content = f"[bold white]{item.name}[/bold white]"
+                if item.name == "execute_command" and hasattr(item, "arguments"):
+                    import json
+                    try:
+                        args = json.loads(item.arguments) if isinstance(item.arguments, str) else item.arguments
+                        command = args.get("command", "")
+                        if command:
+                            # Truncate very long commands
+                            display_cmd = command if len(command) <= 100 else command[:97] + "..."
+                            panel_content = f"[bold white]{item.name}[/bold white]\n[dim cyan]{display_cmd}[/dim cyan]"
+                    except:
+                        pass
+                
                 # Create a panel for tool call
                 tool_panel = Panel(
-                    f"[bold white]{item.name}[/bold white]",
+                    panel_content,
                     title=f"[bold yellow]{icon} Tool Call[/bold yellow]",
                     border_style="yellow",
                     padding=(0, 1)
