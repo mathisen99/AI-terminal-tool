@@ -18,6 +18,17 @@ ai "What's the weather in Tokyo?"
 - 💾 **Memory** - Remembers your conversations
 - 🔒 **Safe mode** - Ask-only mode for learning without changes
 
+## 📋 Requirements
+
+- **Python 3.8+** (check with `python --version`)
+- **UV package manager** ([install guide](https://docs.astral.sh/uv/getting-started/installation/))
+- **Chrome/Chromium** (for JavaScript-rendered pages)
+- **OpenAI API key** ([get one here](https://platform.openai.com/api-keys))
+
+Optional:
+- **fastfetch** (for detailed system info, falls back to basic info if not available)
+- **BFL API key** (for image generation, [get one here](https://api.bfl.ai/))
+
 ## 🚀 Quick Start
 
 ```bash
@@ -35,8 +46,6 @@ nano .env  # Add your API key
 source .venv/bin/activate
 python main.py "What's the weather today?"
 ```
-
-Get your OpenAI API key: https://platform.openai.com/api-keys
 
 ### Make it Global (Optional)
 

@@ -43,14 +43,16 @@ SYSTEM_INFO_CACHE_DURATION = 300  # 5 minutes in seconds
 
 def get_system_info():
     """
-    Get system information using fastfetch.
+    Get system information using platform-appropriate tools.
+    Tries fastfetch first, falls back to basic platform info.
     Cached for 5 minutes to avoid repeated calls.
     
     Returns:
-        str: System information or error message
+        str: System information or basic platform info
     """
     import subprocess
     import time
+    import platform
     
     global _system_info_cache, _system_info_timestamp
     
@@ -61,7 +63,7 @@ def get_system_info():
         current_time - _system_info_timestamp < SYSTEM_INFO_CACHE_DURATION):
         return _system_info_cache
     
-    # Fetch new system info
+    # Try fastfetch first (if available)
     try:
         result = subprocess.run(
             "fastfetch --pipe",
@@ -74,8 +76,17 @@ def get_system_info():
             _system_info_cache = result.stdout
             _system_info_timestamp = current_time
             return _system_info_cache
-        else:
-            return "System info unavailable"
+    except Exception:
+        pass
+    
+    # Fallback to basic platform info
+    try:
+        info = f"""OS: {platform.system()} {platform.release()}
+Architecture: {platform.machine()}
+Python: {platform.python_version()}"""
+        _system_info_cache = info
+        _system_info_timestamp = current_time
+        return _system_info_cache
     except Exception:
         return "System info unavailable"
 
@@ -123,11 +134,10 @@ TOOL USAGE:
 
 NON-INTERACTIVE COMMANDS ONLY:
 Commands must not require user input. Use non-interactive flags:
-- System updates: `sudo pacman -Syu --noconfirm` (not `sudo pacman -Syu`)
-- Package install: `sudo pacman -S pkg --noconfirm` (not `sudo pacman -S pkg`)
+- Package managers: Add `--noconfirm`, `-y`, or `--yes` flags
 - File viewing: `cat file.txt` (not `less file.txt`)
 - File editing: `sed -i 's/old/new/g' file.txt` (not `vim file.txt`)
-- Always add `-y`, `--yes`, `--noconfirm` flags when available
+- Always add non-interactive flags when available
 """
     else:
         base_prompt += """
@@ -162,6 +172,12 @@ RESPONSE STYLE:
     # Get system info (cached or fetch)
     system_info = get_system_info()
     
+    # Get user and hostname from environment
+    import getpass
+    import socket
+    username = getpass.getuser()
+    hostname = socket.gethostname()
+    
     # Append dynamic context at the end
     base_prompt += f"""
 
@@ -169,8 +185,8 @@ CURRENT CONTEXT:
 - Date: {current_date}
 - Time: {current_time}
 - Working Directory: {cwd}
-- User: mathisen
-- Hostname: Wayz
+- User: {username}
+- Hostname: {hostname}
 
 SYSTEM INFO:
 {system_info}
