@@ -10,8 +10,6 @@ ai "Find my biggest files"
 ai "What's the weather in Tokyo?"
 ```
 
-![Lolo in Action](img/screen2.png)
-
 ## ✨ Features
 
 - 🧠 **GPT-5.1 powered** - Latest OpenAI model with reasoning
