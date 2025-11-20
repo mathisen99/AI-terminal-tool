@@ -28,7 +28,7 @@ ai "What's the weather in Tokyo?"
 
 Optional:
 - **fastfetch** (for detailed system info, falls back to basic info if not available)
-- **BFL API key** (for image generation, [get one here](https://api.bfl.ai/))
+- **BFL API key** (for image generation and editing, [get one here](https://api.bfl.ai/))
 
 ## 🚀 Quick Start
 
