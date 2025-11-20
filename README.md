@@ -14,6 +14,7 @@ ai "What's the weather in Tokyo?"
 - 🌐 **Web search** - Real-time search with citations
 - 🖼️ **Image analysis** - Understand images from files or URLs
 - 🎨 **Image generation** - Create images with FLUX.1 (optional)
+- ✏️ **Image editing** - Edit existing images with text prompts (optional)
 - 💻 **Terminal access** - Execute commands with safety checks
 - 💾 **Memory** - Remembers your conversations
 - 🔒 **Safe mode** - Ask-only mode for learning without changes
@@ -93,6 +94,7 @@ ai --ask "How do I use grep?"
 **Images**
 - "What's in this screenshot?"
 - "Generate an image of a sunset"
+- "Edit this image and make the car red"
 - "Analyze ~/Pictures/photo.jpg"
 
 ## 🔒 Safety
