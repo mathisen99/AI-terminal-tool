@@ -2,11 +2,15 @@
 
 Your friendly AI companion for the command line. Ask questions in plain English and let Lolo handle the rest.
 
+![Lolo Screenshot](img/screen.png)
+
 ```bash
 ai "What's using all my CPU?"
 ai "Find my biggest files"
 ai "What's the weather in Tokyo?"
 ```
+
+![Lolo in Action](img/screen2.png)
 
 ## ✨ Features
 
