@@ -4,6 +4,8 @@ Your friendly AI companion for the command line. Ask questions in plain English 
 
 ![Lolo Screenshot](img/screen.png)
 
+**Example usage:**
+
 ```bash
 ai "What's using all my CPU?"
 ai "Find my biggest files"
