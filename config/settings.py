@@ -113,7 +113,8 @@ def get_system_prompt(ask_mode: bool = False) -> str:
 AVAILABLE TOOLS:
 - web_search: Search the internet for current information
 - fetch_webpage: Fetch and read webpage content
-- analyze_image: Analyze images from files or URLs"""
+- analyze_image: Analyze images from files or URLs
+- execute_python: Execute Python code for calculations, data processing, and analysis"""
     
     # Add image generation tools to prompt only if BFL_API_KEY is available
     if os.environ.get("BFL_API_KEY"):
@@ -132,6 +133,18 @@ TOOL USAGE:
 - Explain before executing
 - Dangerous commands need confirmation
 
+PYTHON EXECUTOR USAGE:
+Use execute_python for:
+- Mathematical calculations (arithmetic, trigonometry, statistics)
+- Data processing (lists, dictionaries, transformations, aggregations)
+- Analysis (filtering, sorting, grouping, conversions)
+- Simulations (Monte Carlo, modeling, predictions)
+- Complex computations where precision matters
+
+Available modules: math, statistics, random, datetime, json, csv, re, itertools, functools, collections, decimal, fractions, hashlib, base64, urllib.parse, html, xml.etree.ElementTree
+
+Example: "Calculate the average of [1,2,3,4,5]" → Use execute_python with: sum([1,2,3,4,5]) / len([1,2,3,4,5])
+
 NON-INTERACTIVE COMMANDS ONLY:
 Commands must not require user input. Use non-interactive flags:
 - Package managers: Add `--noconfirm`, `-y`, or `--yes` flags
@@ -144,7 +157,7 @@ Commands must not require user input. Use non-interactive flags:
 
 MODE: ASK-ONLY (READ-ONLY) 🔒
 You cannot execute commands or modify files.
-Only: search web, fetch content, analyze images, provide guidance.
+Only: search web, fetch content, analyze images, execute Python, provide guidance.
 
 If asked to run commands, explain ask-only mode and suggest:
 1. User can run manually
