@@ -19,6 +19,7 @@ ai "What's the weather in Tokyo?"
 - 🖼️ **Image analysis** - Understand images from files or URLs
 - 🎨 **Image generation** - Create images with FLUX.1 (optional)
 - ✏️ **Image editing** - Edit existing images with text prompts (optional)
+- 🐍 **Python executor** - Execute Python for calculations and data processing
 - 💻 **Terminal access** - Execute commands with safety checks
 - 💾 **Memory** - Remembers your conversations
 - 🔒 **Safe mode** - Ask-only mode for learning without changes
@@ -101,6 +102,13 @@ ai --ask "How do I use grep?"
 - "Edit this image and make the car red"
 - "Analyze ~/Pictures/photo.jpg"
 
+**Calculations & Data**
+- "Calculate the average of [1, 2, 3, 4, 5]"
+- "What's 2^10?"
+- "Convert 100 Fahrenheit to Celsius"
+- "Analyze this data: [10, 20, 30, 40, 50]"
+- "Generate 10 random numbers between 1 and 100"
+
 ## 🔒 Safety
 
 - Dangerous commands require confirmation
@@ -153,6 +161,7 @@ Detailed docs in the `docs/` folder:
 - `Function_calling.md` - Tool definitions
 - `web_search.md` - Web search syntax
 - `image_usage.md` - Image analysis
+- `python_executor.md` - Python code execution
 - `PERFORMANCE_OPTIMIZATION.md` - Optimization guide
 
 ## 🤝 Contributing
