@@ -129,3 +129,6 @@ geckodriver
 local/
 scratch/
 playground/
+
+# Kiro
+.kiro
