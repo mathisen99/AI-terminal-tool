@@ -34,6 +34,8 @@ from tools import (
     edit_image_tool_definition,
     execute_command,
     execute_command_tool_definition,
+    execute_python,
+    python_executor_tool_definition,
 )
 
 # Initialize Rich console
@@ -57,12 +59,14 @@ def get_available_tools(ask_mode: bool = False):
         web_search_tool_definition,
         web_fetch_tool_definition,
         analyze_image_tool_definition,
+        python_executor_tool_definition,
     ]
     
     # Function handlers for custom function tools
     function_handlers = {
         "fetch_webpage": fetch_webpage,
         "analyze_image": analyze_image,
+        "execute_python": execute_python,
     }
     
     # Add image generation/editing tools only if BFL_API_KEY is set
@@ -295,7 +299,8 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                     "analyze_image": "🖼️",
                     "generate_image": "🎨",
                     "edit_image": "✏️",
-                    "execute_command": "💻"
+                    "execute_command": "💻",
+                    "execute_python": "🐍"
                 }
                 icon = tool_icons.get(item.name, "🔧")
                 
@@ -386,6 +391,8 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                         spinner_msg = "[bold yellow]✏️  Editing image...[/bold yellow]"
                     elif item.name == "execute_command":
                         spinner_msg = "[bold yellow]💻 Running command...[/bold yellow]"
+                    elif item.name == "execute_python":
+                        spinner_msg = "[bold yellow]🐍 Executing Python...[/bold yellow]"
                     else:
                         spinner_msg = "[bold yellow]🔧 Running tool...[/bold yellow]"
                     break

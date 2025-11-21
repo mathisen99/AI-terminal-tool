@@ -9,6 +9,7 @@ from .image_generation import (
     edit_image_tool_definition
 )
 from .terminal import execute_command, execute_command_tool_definition
+from .python_executor import execute_python, python_executor_tool_definition
 
 __all__ = [
     "web_search_tool_definition",
@@ -22,4 +23,6 @@ __all__ = [
     "edit_image_tool_definition",
     "execute_command",
     "execute_command_tool_definition",
+    "execute_python",
+    "python_executor_tool_definition",
 ]
