@@ -18,7 +18,7 @@ console = Console()
 execute_command_tool_definition = {
     "type": "function",
     "name": "execute_command",
-    "description": "Execute zsh command. Supports file ops (cat, ls, sed, grep, echo). Returns stdout, stderr, exit code. Dangerous commands need confirmation. MUST be non-interactive (use --noconfirm; sed/echo not vim/nano; cat not less/more).",
+    "description": "EXECUTE shell commands immediately. Use this to: read files (cat), modify files (sed, echo), list directories (ls), search (grep), install packages, update configs, etc. Dangerous commands auto-prompt for confirmation. MUST be non-interactive (use --noconfirm; sed/echo not vim/nano; cat not less/more). When user asks to do something, USE THIS TOOL to do it.",
     "parameters": {
         "type": "object",
         "properties": {

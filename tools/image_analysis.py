@@ -12,7 +12,7 @@ import math
 analyze_image_tool_definition = {
     "type": "function",
     "name": "analyze_image",
-    "description": "Analyze image from file path or URL. Supports PNG, JPEG, WEBP, GIF (non-animated). Max 50MB.",
+    "description": "ANALYZE images immediately from file path or URL. Use this when user asks to check/analyze/look at an image. Supports PNG, JPEG, WEBP, GIF (non-animated). Max 50MB. After analyzing, if user asks to fix something, use execute_command to make the changes.",
     "parameters": {
         "type": "object",
         "properties": {

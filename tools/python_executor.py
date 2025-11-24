@@ -10,7 +10,7 @@ import time
 python_executor_tool_definition = {
     "type": "function",
     "name": "execute_python",
-    "description": "Execute Python code for calculations, data processing, and analysis. Returns stdout, stderr, and exit code. Safe sandbox execution.",
+    "description": "EXECUTE Python code immediately for calculations, data processing, and analysis. Use this when user asks to calculate, process data, or analyze something. Returns stdout, stderr, and exit code. Safe sandbox execution.",
     "parameters": {
         "type": "object",
         "properties": {

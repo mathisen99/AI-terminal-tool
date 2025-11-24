@@ -19,7 +19,7 @@ USER_AGENTS = [
 web_fetch_tool_definition = {
     "type": "function",
     "name": "fetch_webpage",
-    "description": "Fetch webpage text content. Handles JS-rendered pages, bypasses bot protection. Returns up to 25k chars.",
+    "description": "FETCH webpage content immediately when user asks to read/check a webpage. Handles JS-rendered pages, bypasses bot protection. Returns up to 25k chars. Use this to get information from specific URLs.",
     "parameters": {
         "type": "object",
         "properties": {
