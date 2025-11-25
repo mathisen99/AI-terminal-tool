@@ -17,8 +17,8 @@ ai "What's the weather in Tokyo?"
 - 🧠 **GPT-5.1 powered** - Latest OpenAI model with reasoning
 - 🌐 **Web search** - Real-time search with citations
 - 🖼️ **Image analysis** - Understand images from files or URLs
-- 🎨 **Image generation** - Create images with FLUX.1 (optional)
-- ✏️ **Image editing** - Edit existing images with text prompts (optional)
+- 🎨 **Image generation** - Create images with FLUX.2 up to 4MP (optional)
+- ✏️ **Image editing** - Edit images with multi-reference support (optional)
 - 🐍 **Python executor** - Execute Python for calculations and data processing
 - 💻 **Terminal access** - Execute commands with safety checks
 - 💾 **Memory** - Remembers your conversations

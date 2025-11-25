@@ -125,8 +125,8 @@ AVAILABLE TOOLS:
     # Add image generation tools to prompt only if BFL_API_KEY is available
     if os.environ.get("BFL_API_KEY"):
         base_prompt += """
-- generate_image: Create images from text prompts using FLUX.1 Kontext
-- edit_image: Edit existing images with text prompts"""
+- generate_image: Create images from text prompts using FLUX.2 (up to 4MP, hex colors, typography)
+- edit_image: Edit images with FLUX.2 (multi-reference support, photorealistic edits, pose guidance)"""
 
     if not ask_mode:
         base_prompt += """
