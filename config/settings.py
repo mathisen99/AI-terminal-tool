@@ -11,11 +11,11 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")  # noqa: F401
 
 # Model Configuration
-DEFAULT_MODEL = "gpt-5.1"
+DEFAULT_MODEL = "gpt-5.2"
 
 # Reasoning Configuration
 # Options: "none" (fast, low-latency), "low", "medium", "high" (complex tasks)
-DEFAULT_REASONING_EFFORT = "none"
+DEFAULT_REASONING_EFFORT = "medium"
 
 # Verbosity Configuration
 # Options: "low" (concise), "medium" (balanced), "high" (detailed)
