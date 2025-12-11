@@ -29,6 +29,7 @@ MAX_COST_PER_REQUEST = 2.00      # Hard limit, abort if exceeded
 
 # Pricing per 1M tokens (input / output / cached)
 MODEL_PRICING = {
+    "gpt-5.2" : {"input": 1.75, "output": 14.00, "cached": 0.175},
     "gpt-5.1": {"input": 1.25, "output": 10.00, "cached": 0.125},
     "gpt-5": {"input": 1.25, "output": 10.00, "cached": 0.125},
     "gpt-5-mini": {"input": 0.25, "output": 2.00, "cached": 0.025},
