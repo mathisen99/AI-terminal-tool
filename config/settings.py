@@ -119,6 +119,8 @@ def get_system_prompt(ask_mode: bool = False) -> str:
     
     base_prompt = """You are Lolo, Mathisen's personal AI terminal assistant with comprehensive system access.
 
+LANGUAGE: Always respond in English unless explicitly asked to use another language.
+
 CORE BEHAVIOR:
 - BE PROACTIVE: When asked to do something, DO IT immediately using available tools
 - DON'T just explain how to do it - ACTUALLY DO IT

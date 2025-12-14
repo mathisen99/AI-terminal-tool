@@ -107,6 +107,11 @@ class VoiceSession:
         self._display_usage(usage)
         self._check_cost_limits(usage)
     
+    def _on_interrupted(self):
+        """Handle user interruption (barge-in)."""
+        if self.audio:
+            self.audio.clear_playback_queue()
+    
     def _display_usage(self, usage: UsageStats):
         """Display usage statistics after each response."""
         # Compact one-line usage display
@@ -248,6 +253,7 @@ Model: [cyan]{self.model}[/cyan]
         self.realtime.on_error = self._on_error
         self.realtime.on_session_created = self._on_session_created
         self.realtime.on_response_done = self._on_response_done
+        self.realtime.on_interrupted = self._on_interrupted
         
         # Connect audio input to realtime service
         self.audio.on_audio_input = self.realtime.send_audio

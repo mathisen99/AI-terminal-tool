@@ -86,6 +86,7 @@ class RealtimeService:
         self.on_error: Optional[Callable[[str], None]] = None
         self.on_session_created: Optional[Callable[[Dict], None]] = None
         self.on_response_done: Optional[Callable[[Dict, UsageStats], None]] = None  # (event, usage)
+        self.on_interrupted: Optional[Callable[[], None]] = None  # Called when user interrupts
         
         # State tracking
         self.is_speaking = False
@@ -202,6 +203,7 @@ class RealtimeService:
         """Get available tools for the realtime session."""
         import os
         from tools import (
+            web_search_function_tool_definition,
             web_fetch_tool_definition,
             analyze_image_tool_definition,
             python_executor_tool_definition,
@@ -212,8 +214,8 @@ class RealtimeService:
         
         tools = []
         
-        # Note: web_search is not supported in Realtime API (only function and mcp types)
-        # Use fetch_webpage to get web content instead
+        # Add web search as a function tool (internally uses OpenAI's web search API)
+        tools.append(self._convert_to_realtime_tool(web_search_function_tool_definition))
         
         # Add function tools available in all modes
         tools.append(self._convert_to_realtime_tool(web_fetch_tool_definition))
@@ -320,19 +322,28 @@ class RealtimeService:
                 
             elif event_type == "error":
                 error_msg = event.get("error", {}).get("message", "Unknown error")
-                console.print(f"[red]API Error: {error_msg}[/red]")
-                if self.on_error:
-                    self.on_error(error_msg)
+                # Suppress harmless cancellation errors (happens when user speaks but no response is active)
+                if "no active response" in error_msg.lower():
+                    pass  # Ignore - this is expected when cancelling during silence
+                else:
+                    console.print(f"[red]API Error: {error_msg}[/red]")
+                    if self.on_error:
+                        self.on_error(error_msg)
                     
             elif event_type == "input_audio_buffer.speech_started":
-                # User started speaking - interrupt any ongoing response
+                # User started speaking - interrupt any ongoing response (barge-in)
                 self.is_speaking = False
+                # Cancel the current response to stop audio generation
+                self._send_event({"type": "response.cancel"})
                 # Clear audio output queue
                 while not self.audio_output_queue.empty():
                     try:
                         self.audio_output_queue.get_nowait()
                     except queue.Empty:
                         break
+                # Notify callback to clear audio handler queue too
+                if self.on_interrupted:
+                    self.on_interrupted()
                         
             elif event_type == "input_audio_buffer.speech_stopped":
                 # User stopped speaking
@@ -379,15 +390,6 @@ class RealtimeService:
     
     def _handle_function_call(self, event):
         """Handle a function call from the model."""
-        from tools import (
-            fetch_webpage,
-            execute_python,
-            execute_command,
-            analyze_image,
-            generate_image,
-            edit_image,
-        )
-        
         call_id = event.get("call_id")
         name = event.get("name")
         arguments = event.get("arguments", "{}")
@@ -399,6 +401,7 @@ class RealtimeService:
         
         # Tool icons for display
         tool_icons = {
+            "web_search": "🔍",
             "fetch_webpage": "🌐",
             "analyze_image": "🖼️",
             "generate_image": "🎨",
@@ -409,30 +412,60 @@ class RealtimeService:
         icon = tool_icons.get(name, "🔧")
         console.print(f"[yellow]{icon} Tool: {name}[/yellow]")
         
-        # Execute the function
-        result = ""
+        # Long-running tools that need to run in background thread to avoid WebSocket timeout
+        long_running_tools = {"generate_image", "edit_image"}
+        
+        if name in long_running_tools:
+            # Run in background thread to prevent WebSocket keepalive timeout
+            thread = threading.Thread(
+                target=self._execute_tool_async,
+                args=(call_id, name, args),
+                daemon=True
+            )
+            thread.start()
+        else:
+            # Execute quick tools synchronously
+            result = self._execute_tool(name, args)
+            self._send_function_result(call_id, result)
+    
+    def _execute_tool(self, name: str, args: dict) -> str:
+        """Execute a tool and return the result."""
+        from tools import (
+            web_search,
+            fetch_webpage,
+            execute_python,
+            execute_command,
+            analyze_image,
+            generate_image,
+            edit_image,
+        )
+        
         try:
-            if name == "fetch_webpage":
-                result = fetch_webpage(**args)
+            if name == "web_search":
+                return web_search(**args)
+            elif name == "fetch_webpage":
+                return fetch_webpage(**args)
             elif name == "execute_python":
-                result = execute_python(**args)
+                return execute_python(**args)
             elif name == "analyze_image":
-                result = analyze_image(**args)
+                return analyze_image(**args)
             elif name == "generate_image":
-                result = generate_image(**args)
+                return generate_image(**args)
             elif name == "edit_image":
-                result = edit_image(**args)
+                return edit_image(**args)
             elif name == "execute_command":
                 if self.ask_mode:
-                    result = "Command execution is disabled in ask-only mode."
+                    return "Command execution is disabled in ask-only mode."
                 else:
-                    result = execute_command(**args)
+                    return execute_command(**args)
             else:
-                result = f"Unknown function: {name}"
+                return f"Unknown function: {name}"
         except Exception as e:
-            result = f"Error executing {name}: {str(e)}"
-        
-        # Send function result back
+            return f"Error executing {name}: {str(e)}"
+    
+    def _execute_tool_async(self, call_id: str, name: str, args: dict):
+        """Execute a long-running tool in background and send result when done."""
+        result = self._execute_tool(name, args)
         self._send_function_result(call_id, result)
     
     def _send_function_result(self, call_id: str, result: str):
