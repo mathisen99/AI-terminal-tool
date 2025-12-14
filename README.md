@@ -132,13 +132,13 @@ ai --voice
 ai --voice --ask
 
 # Use a different voice
-ai --voice --voice-name nova
+ai --voice --voice-name marin
 
 # List all available voices
 ai --list-voices
 ```
 
-Available voices: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse
+Available voices: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, cedar
 
 Voice mode features:
 - Real-time speech recognition and response

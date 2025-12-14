@@ -621,7 +621,7 @@ Examples:
         "--voice-name",
         type=str,
         default="alloy",
-        choices=["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"],
+        choices=["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"],
         help="Voice for audio output (default: alloy)"
     )
     
@@ -642,12 +642,11 @@ def list_voices():
         "ballad": "Warm, melodic voice",
         "coral": "Clear, friendly voice",
         "echo": "Smooth, calm voice",
-        "fable": "Expressive, storytelling voice",
-        "nova": "Energetic, bright voice",
-        "onyx": "Deep, authoritative voice",
         "sage": "Wise, measured voice",
         "shimmer": "Light, airy voice",
         "verse": "Poetic, rhythmic voice",
+        "marin": "Natural, conversational voice",
+        "cedar": "Deep, warm voice",
     }
     
     table = Table(title="[bold cyan]Available Voices[/bold cyan]")
@@ -661,7 +660,7 @@ def list_voices():
     console.print()
     console.print(table)
     console.print()
-    console.print("[dim]Example: ai --voice --voice-name nova[/dim]")
+    console.print("[dim]Example: ai --voice --voice-name marin[/dim]")
     console.print()
 
 
