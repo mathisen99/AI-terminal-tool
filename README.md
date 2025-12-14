@@ -83,6 +83,9 @@ ai --ask "How do I use grep?"
 # Voice mode (speech input/output)
 ai --voice
 
+# Voice mode with push-to-talk (hold Space to record)
+ai --voice --ptt
+
 # Voice mode with safe mode
 ai --voice --ask
 
@@ -128,6 +131,9 @@ Talk to Lolo using your voice! Voice mode uses OpenAI's Realtime API for low-lat
 # Start voice mode
 ai --voice
 
+# Push-to-talk mode (hold Space to record, prevents accidental input)
+ai --voice --ptt
+
 # Voice mode with read-only (no commands)
 ai --voice --ask
 
@@ -142,8 +148,9 @@ Available voices: alloy, ash, ballad, coral, echo, sage, shimmer, verse, marin, 
 
 Voice mode features:
 - Real-time speech recognition and response
+- Push-to-talk option (`--ptt`) to prevent accidental voice input
 - Text transcripts displayed in terminal
-- Same tools as CLI (except web search)
+- Same tools as CLI (web search, image gen, commands, etc.)
 - Cost tracking per response
 - Same $2.00 cost limit as CLI
 

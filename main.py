@@ -613,6 +613,7 @@ Examples:
   python main.py --new "Tell me about Python"            # Start new session (clear memory)
   python main.py --ask "How do I use sed?"               # Ask-only mode (no system modifications)
   python main.py --voice                                 # Voice mode with speech input/output
+  python main.py --voice --ptt                           # Voice mode with push-to-talk (hold Space)
   python main.py --voice --ask                           # Voice mode, read-only
   python main.py --list-voices                           # List available voices
         """
@@ -654,6 +655,12 @@ Examples:
         "--list-voices",
         action="store_true",
         help="List all available voices for voice mode"
+    )
+    
+    parser.add_argument(
+        "--ptt",
+        action="store_true",
+        help="Push-to-talk mode: hold Spacebar to record (prevents accidental voice input)"
     )
     
     return parser.parse_args()
@@ -714,7 +721,7 @@ def main():
     if args.voice:
         from services import run_voice_mode
         console.print()
-        run_voice_mode(ask_mode=args.ask, voice=args.voice_name)
+        run_voice_mode(ask_mode=args.ask, voice=args.voice_name, push_to_talk=args.ptt)
         return
     
     # For non-voice mode, require a question

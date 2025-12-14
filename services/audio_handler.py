@@ -1,6 +1,10 @@
 """Audio handler for microphone input and speaker output."""
 import threading
 import queue
+import sys
+import termios
+import tty
+import select
 from typing import Optional, Callable
 from rich.console import Console
 
@@ -12,12 +16,20 @@ CHANNELS = 1
 CHUNK_SIZE = 1024
 FORMAT_BITS = 16
 
+# Push-to-talk key (spacebar)
+PTT_KEY = " "
+
 
 class AudioHandler:
     """Handles microphone input and speaker output for voice mode."""
     
-    def __init__(self):
-        """Initialize the audio handler."""
+    def __init__(self, push_to_talk: bool = False):
+        """
+        Initialize the audio handler.
+        
+        Args:
+            push_to_talk: If True, only send audio while PTT key is held
+        """
         self.pyaudio = None
         self.input_stream = None
         self.output_stream = None
@@ -32,10 +44,16 @@ class AudioHandler:
         self._stop_event = threading.Event()
         self._input_thread: Optional[threading.Thread] = None
         self._output_thread: Optional[threading.Thread] = None
+        self._ptt_thread: Optional[threading.Thread] = None
         
         # State
         self.is_recording = False
         self.is_playing = False
+        
+        # Push-to-talk state
+        self.push_to_talk = push_to_talk
+        self.ptt_active = False  # True when PTT key is held
+        self._old_terminal_settings = None
     
     def initialize(self) -> bool:
         """
@@ -115,12 +133,56 @@ class AudioHandler:
             try:
                 if self.input_stream and self.input_stream.is_active():
                     audio_data = self.input_stream.read(CHUNK_SIZE, exception_on_overflow=False)
-                    if self.on_audio_input:
+                    # Only send audio if PTT is disabled or PTT key is held
+                    if self.on_audio_input and (not self.push_to_talk or self.ptt_active):
                         self.on_audio_input(audio_data)
             except Exception as e:
                 if not self._stop_event.is_set():
                     console.print(f"[red]Recording error: {e}[/red]")
                 break
+    
+    def _ptt_loop(self):
+        """Loop to monitor push-to-talk key state."""
+        try:
+            # Save terminal settings and switch to raw mode
+            fd = sys.stdin.fileno()
+            self._old_terminal_settings = termios.tcgetattr(fd)
+            tty.setcbreak(fd)
+            
+            was_active = False
+            
+            while not self._stop_event.is_set():
+                # Check if key is available (non-blocking)
+                if select.select([sys.stdin], [], [], 0.05)[0]:
+                    key = sys.stdin.read(1)
+                    
+                    if key == PTT_KEY:
+                        if not self.ptt_active:
+                            self.ptt_active = True
+                            if not was_active:
+                                console.print("[green]🎤 Recording...[/green]", end="\r")
+                                was_active = True
+                    elif key == "\x03":  # Ctrl+C
+                        self._stop_event.set()
+                        break
+                else:
+                    # No key pressed - release PTT
+                    if self.ptt_active:
+                        self.ptt_active = False
+                        if was_active:
+                            console.print("[dim]   Release to stop[/dim]", end="\r")
+                            was_active = False
+                            
+        except Exception as e:
+            if not self._stop_event.is_set():
+                console.print(f"[red]PTT error: {e}[/red]")
+        finally:
+            # Restore terminal settings
+            if self._old_terminal_settings:
+                try:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, self._old_terminal_settings)
+                except Exception:
+                    pass
     
     def stop_recording(self):
         """Stop recording from microphone."""
@@ -227,6 +289,11 @@ class AudioHandler:
             self.stop_playback()
             return False
         
+        # Start PTT monitoring if enabled
+        if self.push_to_talk:
+            self._ptt_thread = threading.Thread(target=self._ptt_loop, daemon=True)
+            self._ptt_thread.start()
+        
         return True
     
     def stop(self):
@@ -234,6 +301,15 @@ class AudioHandler:
         self._stop_event.set()
         self.stop_recording()
         self.stop_playback()
+        
+        # Restore terminal settings if PTT was used
+        if self._old_terminal_settings:
+            try:
+                fd = sys.stdin.fileno()
+                termios.tcsetattr(fd, termios.TCSADRAIN, self._old_terminal_settings)
+            except Exception:
+                pass
+            self._old_terminal_settings = None
         
         if self.pyaudio:
             try:

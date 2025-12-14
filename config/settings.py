@@ -164,6 +164,9 @@ Available modules: math, statistics, random, datetime, json, csv, re, itertools,
 
 Example: "Calculate the average of [1,2,3,4,5]" → Use execute_python with: sum([1,2,3,4,5]) / len([1,2,3,4,5])
 
+Image viewing
+use imv to display images to user when asked.
+
 NON-INTERACTIVE COMMANDS ONLY:
 Commands must not require user input. Use non-interactive flags:
 - Package managers: Add `--noconfirm`, `-y`, or `--yes` flags

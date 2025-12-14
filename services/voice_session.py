@@ -25,7 +25,8 @@ class VoiceSession:
         self,
         ask_mode: bool = False,
         voice: str = "alloy",
-        model: str = "gpt-realtime"
+        model: str = "gpt-realtime",
+        push_to_talk: bool = False
     ):
         """
         Initialize the voice session.
@@ -34,10 +35,12 @@ class VoiceSession:
             ask_mode: If True, disable command execution
             voice: Voice for audio output
             model: Realtime model to use
+            push_to_talk: If True, only record while spacebar is held
         """
         self.ask_mode = ask_mode
         self.voice = voice
         self.model = model
+        self.push_to_talk = push_to_talk
         
         # Components
         self.realtime: Optional[RealtimeService] = None
@@ -167,19 +170,31 @@ class VoiceSession:
     def _display_welcome(self):
         """Display welcome message and instructions."""
         mode_text = "[yellow]Ask-Only Mode 🔒[/yellow]" if self.ask_mode else "[green]Normal Mode[/green]"
+        ptt_text = "[cyan]Push-to-Talk (hold Space)[/cyan]" if self.push_to_talk else "[green]Always On[/green]"
         
-        welcome_content = f"""[bold]Voice Mode Active[/bold]
+        if self.push_to_talk:
+            instructions = """[bold]Instructions:[/bold]
+• Hold [bold]Spacebar[/bold] to talk, release to send
+• Press [bold]Ctrl+C[/bold] to exit
+• Say "goodbye" or "exit" to end the session
 
-Mode: {mode_text}
-Voice: [cyan]{self.voice}[/cyan]
-Model: [cyan]{self.model}[/cyan]
-
-[bold]Instructions:[/bold]
+[dim]Hold Space to speak...[/dim]"""
+        else:
+            instructions = """[bold]Instructions:[/bold]
 • Speak naturally - the AI will respond with voice and text
 • Press [bold]Ctrl+C[/bold] to exit
 • Say "goodbye" or "exit" to end the session
 
 [dim]Listening...[/dim]"""
+        
+        welcome_content = f"""[bold]Voice Mode Active[/bold]
+
+Mode: {mode_text}
+Input: {ptt_text}
+Voice: [cyan]{self.voice}[/cyan]
+Model: [cyan]{self.model}[/cyan]
+
+{instructions}"""
         
         panel = Panel(
             welcome_content,
@@ -234,7 +249,7 @@ Model: [cyan]{self.model}[/cyan]
         
         # Initialize audio handler
         console.print("[cyan]Initializing audio...[/cyan]")
-        self.audio = AudioHandler()
+        self.audio = AudioHandler(push_to_talk=self.push_to_talk)
         if not self.audio.start():
             console.print("[red]Failed to initialize audio[/red]")
             return False
@@ -343,13 +358,14 @@ Model: [cyan]{self.model}[/cyan]
             self.memory_manager.add_conversation(memory, conversation_data)
 
 
-def run_voice_mode(ask_mode: bool = False, voice: str = "alloy"):
+def run_voice_mode(ask_mode: bool = False, voice: str = "alloy", push_to_talk: bool = False):
     """
     Run the voice mode session.
     
     Args:
         ask_mode: If True, disable command execution
         voice: Voice for audio output
+        push_to_talk: If True, only record while spacebar is held
     """
-    session = VoiceSession(ask_mode=ask_mode, voice=voice)
+    session = VoiceSession(ask_mode=ask_mode, voice=voice, push_to_talk=push_to_talk)
     session.run()
