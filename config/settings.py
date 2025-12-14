@@ -36,6 +36,14 @@ MODEL_PRICING = {
     "gpt-5-nano": {"input": 0.05, "output": 0.40, "cached": 0.005},
 }
 
+# Realtime API pricing per 1M tokens (audio tokens)
+REALTIME_PRICING = {
+    "gpt-realtime": {"input": 32.00, "output": 64.00, "cached": 0.40},
+    "gpt-realtime-mini": {"input": 10.00, "output": 20.00, "cached": 0.30},
+    "gpt-4o-realtime-preview": {"input": 40.00, "output": 80.00, "cached": 2.50},
+    "gpt-4o-mini-realtime-preview": {"input": 10.00, "output": 20.00, "cached": 0.30},
+}
+
 # System Info Cache
 _system_info_cache = None
 _system_info_timestamp = None

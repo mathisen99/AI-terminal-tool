@@ -6,3 +6,5 @@ selenium>=4.15.0
 undetected-chromedriver>=3.5.0
 Pillow>=10.0.0
 rich>=13.0.0
+websocket-client>=1.6.0
+pyaudio>=0.2.14

@@ -587,12 +587,15 @@ Examples:
   python main.py "What's the weather in Paris?"          # Continue previous conversation
   python main.py --new "Tell me about Python"            # Start new session (clear memory)
   python main.py --ask "How do I use sed?"               # Ask-only mode (no system modifications)
+  python main.py --voice                                 # Voice mode with speech input/output
+  python main.py --voice --ask                           # Voice mode, read-only
+  python main.py --list-voices                           # List available voices
         """
     )
     
     parser.add_argument(
         "question",
-        nargs="+",
+        nargs="*",  # Changed to * to allow voice mode without question
         help="Your question for the AI assistant"
     )
     
@@ -608,12 +611,71 @@ Examples:
         help="Ask-only mode: read-only, no command execution or file modifications"
     )
     
+    parser.add_argument(
+        "--voice",
+        action="store_true",
+        help="Voice mode: use speech input/output via Realtime API"
+    )
+    
+    parser.add_argument(
+        "--voice-name",
+        type=str,
+        default="alloy",
+        choices=["alloy", "ash", "ballad", "coral", "echo", "fable", "onyx", "nova", "sage", "shimmer", "verse"],
+        help="Voice for audio output (default: alloy)"
+    )
+    
+    parser.add_argument(
+        "--list-voices",
+        action="store_true",
+        help="List all available voices for voice mode"
+    )
+    
     return parser.parse_args()
+
+
+def list_voices():
+    """Display available voices for voice mode."""
+    voices = {
+        "alloy": "Neutral, balanced voice",
+        "ash": "Soft, gentle voice",
+        "ballad": "Warm, melodic voice",
+        "coral": "Clear, friendly voice",
+        "echo": "Smooth, calm voice",
+        "fable": "Expressive, storytelling voice",
+        "nova": "Energetic, bright voice",
+        "onyx": "Deep, authoritative voice",
+        "sage": "Wise, measured voice",
+        "shimmer": "Light, airy voice",
+        "verse": "Poetic, rhythmic voice",
+    }
+    
+    table = Table(title="[bold cyan]Available Voices[/bold cyan]")
+    table.add_column("Voice", style="cyan", justify="left")
+    table.add_column("Description", style="white")
+    table.add_column("Usage", style="dim")
+    
+    for voice, description in voices.items():
+        table.add_row(voice, description, f"--voice-name {voice}")
+    
+    console.print()
+    console.print(table)
+    console.print()
+    console.print("[dim]Example: ai --voice --voice-name nova[/dim]")
+    console.print()
 
 
 def main():
     """Main entry point."""
     import os
+    
+    # Parse command-line arguments first (before API key check for --list-voices)
+    args = parse_arguments()
+    
+    # Handle --list-voices (doesn't need API key)
+    if args.list_voices:
+        list_voices()
+        return
     
     # Check for OpenAI API key
     if not os.environ.get("OPENAI_API_KEY"):
@@ -622,6 +684,18 @@ def main():
         error_msg += "  echo 'OPENAI_API_KEY=sk-your-key-here' >> .env\n\n"
         error_msg += "Get your API key from: https://platform.openai.com/api-keys"
         console.print(create_error_panel(error_msg))
+        sys.exit(1)
+    
+    # Handle voice mode
+    if args.voice:
+        from services import run_voice_mode
+        console.print()
+        run_voice_mode(ask_mode=args.ask, voice=args.voice_name)
+        return
+    
+    # For non-voice mode, require a question
+    if not args.question:
+        console.print(create_error_panel("Please provide a question or use --voice for voice mode"))
         sys.exit(1)
     
     # Check for BFL API key (optional, just inform user)
@@ -636,9 +710,6 @@ def main():
             padding=(1, 2)
         ))
         console.print()
-    
-    # Parse command-line arguments
-    args = parse_arguments()
     
     # Join question parts into a single string
     question = " ".join(args.question)

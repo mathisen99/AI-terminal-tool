@@ -15,6 +15,7 @@ ai "What's the weather in Tokyo?"
 ## ✨ Features
 
 - 🧠 **GPT-5.1 powered** - Latest OpenAI model with reasoning
+- 🎤 **Voice mode** - Talk to Lolo with speech input/output via Realtime API
 - 🌐 **Web search** - Real-time search with citations
 - 🖼️ **Image analysis** - Understand images from files or URLs
 - 🎨 **Image generation** - Create images with FLUX.2 up to 4MP (optional)
@@ -34,6 +35,7 @@ ai "What's the weather in Tokyo?"
 Optional:
 - **fastfetch** (for detailed system info, falls back to basic info if not available)
 - **BFL API key** (for image generation and editing, [get one here](https://api.bfl.ai/))
+- **PortAudio** (for voice mode - `sudo apt install portaudio19-dev` on Linux, `brew install portaudio` on macOS)
 
 ## 🚀 Quick Start
 
@@ -77,6 +79,15 @@ ai --new "Tell me about Python"
 
 # Safe mode (no system changes)
 ai --ask "How do I use grep?"
+
+# Voice mode (speech input/output)
+ai --voice
+
+# Voice mode with safe mode
+ai --voice --ask
+
+# Voice mode with different voice
+ai --voice --voice-name nova
 ```
 
 ## 🎯 What Can You Ask?
@@ -108,6 +119,33 @@ ai --ask "How do I use grep?"
 - "Convert 100 Fahrenheit to Celsius"
 - "Analyze this data: [10, 20, 30, 40, 50]"
 - "Generate 10 random numbers between 1 and 100"
+
+## 🎤 Voice Mode
+
+Talk to Lolo using your voice! Voice mode uses OpenAI's Realtime API for low-latency speech-to-speech conversations.
+
+```bash
+# Start voice mode
+ai --voice
+
+# Voice mode with read-only (no commands)
+ai --voice --ask
+
+# Use a different voice
+ai --voice --voice-name nova
+
+# List all available voices
+ai --list-voices
+```
+
+Available voices: alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse
+
+Voice mode features:
+- Real-time speech recognition and response
+- Text transcripts displayed in terminal
+- Same tools as CLI (except web search)
+- Cost tracking per response
+- Same $2.00 cost limit as CLI
 
 ## 🔒 Safety
 
