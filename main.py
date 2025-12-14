@@ -160,19 +160,36 @@ def calculate_cost(usage, model):
     
     pricing = MODEL_PRICING[model]
     
-    # Get token counts (including reasoning tokens for GPT-5.1)
+    # Get token counts from usage object
     input_tokens = getattr(usage, "input_tokens", 0)
     output_tokens = getattr(usage, "output_tokens", 0)
-    cached_tokens = getattr(usage, "input_tokens_cached", 0)
-    reasoning_tokens = getattr(usage, "reasoning_tokens", 0)
+    
+    # Get detailed breakdowns (nested in details objects)
+    input_details = getattr(usage, "input_tokens_details", None)
+    output_details = getattr(usage, "output_tokens_details", None)
+    
+    # Extract cached tokens from input_tokens_details
+    cached_tokens = 0
+    if input_details:
+        cached_tokens = getattr(input_details, "cached_tokens", 0)
+    
+    # Extract reasoning tokens from output_tokens_details
+    reasoning_tokens = 0
+    if output_details:
+        reasoning_tokens = getattr(output_details, "reasoning_tokens", 0)
     
     # Calculate cost (pricing is per 1M tokens)
-    # Reasoning tokens are counted as output tokens
-    input_cost = (input_tokens - cached_tokens) * pricing["input"] / 1_000_000
+    # input_tokens already includes cached, so subtract cached for full-price input
+    non_cached_input = input_tokens - cached_tokens
+    input_cost = non_cached_input * pricing["input"] / 1_000_000
     cached_cost = cached_tokens * pricing["cached"] / 1_000_000
-    output_cost = (output_tokens + reasoning_tokens) * pricing["output"] / 1_000_000
     
-    total_cost = input_cost + cached_cost + output_cost
+    # output_tokens does NOT include reasoning_tokens, they are separate
+    # But reasoning tokens are billed at output rate
+    output_cost = output_tokens * pricing["output"] / 1_000_000
+    reasoning_cost = reasoning_tokens * pricing["output"] / 1_000_000
+    
+    total_cost = input_cost + cached_cost + output_cost + reasoning_cost
     
     return total_cost
 
@@ -249,8 +266,16 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
             usage = response.usage
             total_input_tokens += getattr(usage, "input_tokens", 0)
             total_output_tokens += getattr(usage, "output_tokens", 0)
-            total_cached_tokens += getattr(usage, "input_tokens_cached", 0)
-            total_reasoning_tokens += getattr(usage, "reasoning_tokens", 0)
+            
+            # Get cached tokens from input_tokens_details
+            input_details = getattr(usage, "input_tokens_details", None)
+            if input_details:
+                total_cached_tokens += getattr(input_details, "cached_tokens", 0)
+            
+            # Get reasoning tokens from output_tokens_details
+            output_details = getattr(usage, "output_tokens_details", None)
+            if output_details:
+                total_reasoning_tokens += getattr(output_details, "reasoning_tokens", 0)
             
             # Calculate cost for this iteration
             iteration_cost = calculate_cost(usage, DEFAULT_MODEL)

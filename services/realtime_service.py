@@ -35,13 +35,18 @@ class UsageStats:
         if not pricing:
             return 0.0
         
-        # Audio tokens are the main cost driver in realtime
-        # Text tokens are also counted but usually minimal
-        input_cost = (self.input_tokens + self.input_audio_tokens) * pricing["input"] / 1_000_000
-        output_cost = (self.output_tokens + self.output_audio_tokens) * pricing["output"] / 1_000_000
-        cached_cost = self.cached_tokens * pricing["cached"] / 1_000_000
+        # Total input = text + audio tokens
+        total_input = self.input_tokens + self.input_audio_tokens
+        total_output = self.output_tokens + self.output_audio_tokens
         
-        return input_cost + output_cost + cached_cost
+        # Cached tokens are billed at reduced rate, subtract from full-price input
+        non_cached_input = max(0, total_input - self.cached_tokens)
+        
+        input_cost = non_cached_input * pricing["input"] / 1_000_000
+        cached_cost = self.cached_tokens * pricing["cached"] / 1_000_000
+        output_cost = total_output * pricing["output"] / 1_000_000
+        
+        return input_cost + cached_cost + output_cost
 
 
 class RealtimeService:
@@ -349,8 +354,9 @@ class RealtimeService:
             output_tokens = usage.get("output_tokens", 0)
             
             # Get detailed breakdown if available
-            input_details = usage.get("input_token_details", {})
-            output_details = usage.get("output_token_details", {})
+            # Try both naming conventions (input_token_details and input_tokens_details)
+            input_details = usage.get("input_token_details", usage.get("input_tokens_details", {}))
+            output_details = usage.get("output_token_details", usage.get("output_tokens_details", {}))
             
             cached_tokens = input_details.get("cached_tokens", 0)
             audio_input = input_details.get("audio_tokens", 0)
@@ -360,8 +366,9 @@ class RealtimeService:
             text_output = output_details.get("text_tokens", 0)
             
             # Update cumulative usage
-            self.usage.input_tokens += text_input or (input_tokens - audio_input)
-            self.usage.output_tokens += text_output or (output_tokens - audio_output)
+            # For text: use text_tokens if available, otherwise calculate from total - audio
+            self.usage.input_tokens += text_input if text_input else max(0, input_tokens - audio_input)
+            self.usage.output_tokens += text_output if text_output else max(0, output_tokens - audio_output)
             self.usage.cached_tokens += cached_tokens
             self.usage.input_audio_tokens += audio_input
             self.usage.output_audio_tokens += audio_output
