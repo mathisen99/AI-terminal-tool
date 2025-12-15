@@ -71,7 +71,8 @@ class OpenAIService:
     def process_function_calls(
         self,
         response: Any,
-        function_handlers: Dict[str, callable]
+        function_handlers: Dict[str, callable],
+        dangerous_commands_confirmed: Optional[Dict[str, bool]] = None
     ) -> List[Dict[str, Any]]:
         """
         Process function calls from the API response.
@@ -79,11 +80,13 @@ class OpenAIService:
         Args:
             response: The API response containing function calls
             function_handlers: Dictionary mapping function names to handler functions
+            dangerous_commands_confirmed: Optional dict of command -> confirmed status for pre-confirmed dangerous commands
         
         Returns:
             List of function call output objects and/or user messages with image data
         """
         function_outputs = []
+        dangerous_commands_confirmed = dangerous_commands_confirmed or {}
         
         for item in response.output:
             if item.type == "function_call":
@@ -91,6 +94,14 @@ class OpenAIService:
                 if handler:
                     # Parse arguments and call the function
                     args = json.loads(item.arguments)
+                    
+                    # For execute_command, check if we have a pre-confirmation result
+                    if item.name == "execute_command":
+                        command = args.get("command", "")
+                        if command in dangerous_commands_confirmed:
+                            # Pass the pre-confirmation result
+                            args["_pre_confirmed"] = dangerous_commands_confirmed[command]
+                    
                     result = handler(**args)
                     
                     # Special handling for analyze_image

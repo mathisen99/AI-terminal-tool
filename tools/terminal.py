@@ -193,6 +193,9 @@ def prompt_user_confirmation(command: str, risk_reason: str) -> bool:
     Returns:
         True if user confirms, False otherwise
     """
+    import sys
+    import threading
+    
     # Create warning panel
     warning_content = f"[bold red]⚠️  DANGEROUS COMMAND DETECTED[/bold red]\n\n"
     warning_content += f"[yellow]Command:[/yellow] [white]{command}[/white]\n\n"
@@ -216,23 +219,39 @@ def prompt_user_confirmation(command: str, risk_reason: str) -> bool:
     console.print(panel)
     console.print()
     
-    # Prompt for confirmation
+    # Prompt for confirmation using direct stdin read to work in threaded contexts
     try:
-        confirmed = Confirm.ask(
-            "[bold yellow]Do you want to proceed with this command?[/bold yellow]",
-            default=False
-        )
-        console.print()
-        return confirmed
+        # Check if we're in the main thread and stdin is a tty
+        is_main_thread = threading.current_thread() is threading.main_thread()
+        stdin_is_tty = sys.stdin.isatty()
+        
+        if stdin_is_tty:
+            # Use direct input() for better thread compatibility
+            console.print("[bold yellow]Do you want to proceed with this command? (yes/no)[/bold yellow] ", end="")
+            sys.stdout.flush()
+            
+            # Read input directly from stdin
+            response = sys.stdin.readline().strip().lower()
+            console.print()
+            
+            return response in ("yes", "y")
+        else:
+            # Non-interactive mode - default to not executing
+            console.print("[red]Non-interactive mode detected - dangerous command blocked[/red]\n")
+            return False
+            
     except KeyboardInterrupt:
         console.print("\n[red]Command cancelled by user (Ctrl+C)[/red]\n")
         return False
-    except Exception:
-        # If prompt fails, default to not executing
+    except EOFError:
+        console.print("\n[red]No input available - command blocked for safety[/red]\n")
+        return False
+    except Exception as e:
+        console.print(f"\n[red]Error reading confirmation: {e} - command blocked for safety[/red]\n")
         return False
 
 
-def execute_command(command: str, working_dir: Optional[str] = None, timeout: Optional[int] = None) -> str:
+def execute_command(command: str, working_dir: Optional[str] = None, timeout: Optional[int] = None, _pre_confirmed: Optional[bool] = None) -> str:
     """
     Execute a shell command and return the output.
     
@@ -240,6 +259,7 @@ def execute_command(command: str, working_dir: Optional[str] = None, timeout: Op
         command: The shell command to execute
         working_dir: Working directory for execution (default: cwd where main.py was invoked)
         timeout: Timeout in seconds (default: 30, max: 300)
+        _pre_confirmed: Internal flag - if set, skips confirmation prompt (already handled by caller)
     
     Returns:
         Formatted string with command output, stderr, and exit code
@@ -274,13 +294,19 @@ def execute_command(command: str, working_dir: Optional[str] = None, timeout: Op
     # Handle risky commands - require user confirmation
     user_confirmed = False
     if risk_level == "risky":
-        # Prompt user for confirmation
-        confirmed = prompt_user_confirmation(command, risk_reason)
-        
-        if not confirmed:
-            return f"❌ Command cancelled by user\n\nCommand: {command}\n\nReason: {risk_reason}\n\n💡 The command was not executed for safety reasons."
-        
-        user_confirmed = True
+        # Check if already pre-confirmed by caller (e.g., main.py prompted before spinner)
+        if _pre_confirmed is not None:
+            if not _pre_confirmed:
+                return f"❌ Command cancelled by user\n\nCommand: {command}\n\nReason: {risk_reason}\n\n💡 The command was not executed for safety reasons."
+            user_confirmed = True
+        else:
+            # Prompt user for confirmation (fallback for direct calls)
+            confirmed = prompt_user_confirmation(command, risk_reason)
+            
+            if not confirmed:
+                return f"❌ Command cancelled by user\n\nCommand: {command}\n\nReason: {risk_reason}\n\n💡 The command was not executed for safety reasons."
+            
+            user_confirmed = True
     
     # Prepare environment (inherit from parent process)
     env = os.environ.copy()

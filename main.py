@@ -37,6 +37,7 @@ from tools import (
     execute_python,
     python_executor_tool_definition,
 )
+from tools.terminal import classify_command_risk, prompt_user_confirmation
 
 # Initialize Rich console
 console = Console()
@@ -402,6 +403,25 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                         except:
                             pass
             
+            # Check if any execute_command calls are dangerous and need confirmation BEFORE spinner
+            # This ensures the confirmation prompt can properly read stdin
+            dangerous_commands_confirmed = {}
+            for item in response.output:
+                if item.type == "function_call" and item.name == "execute_command":
+                    if hasattr(item, "arguments"):
+                        import json
+                        try:
+                            args = json.loads(item.arguments) if isinstance(item.arguments, str) else item.arguments
+                            command = args.get("command", "")
+                            if command:
+                                risk_level, risk_reason = classify_command_risk(command)
+                                if risk_level == "risky":
+                                    # Prompt for confirmation NOW, before spinner starts
+                                    confirmed = prompt_user_confirmation(command, risk_reason)
+                                    dangerous_commands_confirmed[command] = confirmed
+                        except:
+                            pass
+            
             # Use different spinner and message based on tool type
             # Optimized: Simpler messages and consistent spinner for better performance
             for item in response.output:
@@ -426,7 +446,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
             
             # Optimized: Use consistent spinner and reduced refresh rate
             with console.status(spinner_msg, spinner="dots", refresh_per_second=8):
-                function_outputs = service.process_function_calls(response, function_handlers)
+                function_outputs = service.process_function_calls(response, function_handlers, dangerous_commands_confirmed)
             
             # Track tool results for summary
             for output_item in function_outputs:
