@@ -1,7 +1,11 @@
 """Main entry point for the AI assistant."""
 import sys
 import argparse
+import warnings
 from datetime import datetime
+
+# Suppress Pydantic serialization warnings from OpenAI SDK web search responses
+warnings.filterwarnings("ignore", message="Pydantic serializer warnings")
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -299,6 +303,7 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
         has_web_search = False
         has_message = False
         has_reasoning = False
+        web_search_printed = False  # Track if we've already printed web search message
         
         for item in response.output:
             if item.type == "function_call":
@@ -364,21 +369,24 @@ def process_question(question: str, memory_manager: MemoryManager, memory: dict,
                     console.print(create_error_panel(error_msg))
                     raise Exception(f"Tool call limit exceeded: {tool_call_count}")
                 
-                # Display web search with Rich spinner and query details
-                action = getattr(item, "action", None)
-                if action:
-                    query = getattr(action, "query", None)
-                    domains = getattr(action, "domains", None)
-                    
-                    if query:
-                        search_text = f"🌐 Searching web: [bold cyan]{query}[/bold cyan]"
-                        if domains:
-                            search_text += f" [dim](domains: {', '.join(domains[:3])})[/dim]"
-                        console.print(f"[yellow]{search_text}[/yellow]")
+                # Only print web search message once per response
+                if not web_search_printed:
+                    web_search_printed = True
+                    # Display web search with query details if available
+                    action = getattr(item, "action", None)
+                    if action:
+                        query = getattr(action, "query", None)
+                        domains = getattr(action, "domains", None)
+                        
+                        if query:
+                            search_text = f"🌐 Searching web: [bold cyan]{query}[/bold cyan]"
+                            if domains:
+                                search_text += f" [dim](domains: {', '.join(domains[:3])})[/dim]"
+                            console.print(f"[yellow]{search_text}[/yellow]")
+                        else:
+                            console.print("[yellow]🌐 Web search performed[/yellow]")
                     else:
                         console.print("[yellow]🌐 Web search performed[/yellow]")
-                else:
-                    console.print("[yellow]🌐 Web search performed[/yellow]")
                     
             elif item.type == "message":
                 has_message = True
